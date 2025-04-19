@@ -33,10 +33,10 @@ def dashboard():
     teams = Team.get_teams_by_coach(coach_id)
     
     # Get notification count
-    notifications = mongo.db.notifications.find({
+    notifications = mongo.db.notifications.count_documents({
         'user_id': coach_id,
         'read': False
-    }).count()
+    })
     
     # Performance summary
     recent_performances = list(mongo.db.performances.find({
