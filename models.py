@@ -1,8 +1,11 @@
 from app import mongo
 from datetime import datetime
 import json
+import logging
 from bson import json_util
 from bson.objectid import ObjectId
+
+logging.basicConfig(level=logging.INFO)
 
 class User:
     @staticmethod
