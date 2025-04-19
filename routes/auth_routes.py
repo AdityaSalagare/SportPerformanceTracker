@@ -14,7 +14,7 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = User.find_by_email(form.email.data)
-        if user and bcrypt.check_password_hash(user['password'], form.password.data):
+        if user and bcrypt.check_password_hash(user['password_hash'], form.password.data):
             session['user_id'] = str(user['_id'])
             session['username'] = user['username']
             session['email'] = user['email']
