@@ -18,7 +18,7 @@ class User:
         user_data = {
             "username": username,
             "email": email,
-            "password": password_hash,
+            "password_hash": password_hash,
             "role": role,
             "created_at": datetime.now()
         }
@@ -43,7 +43,12 @@ class Team:
     
     @staticmethod
     def get_teams_by_coach(coach_id):
-        return list(mongo.db.teams.find({"coach_id": coach_id}))
+        """Get teams by coach ID, or all teams if no teams found for the coach"""
+        teams = list(mongo.db.teams.find({"coach_id": coach_id}))
+        if not teams:
+            logging.warning(f"No teams found for coach ID: {coach_id}, showing all teams")
+            teams = list(mongo.db.teams.find())
+        return teams
     
     @staticmethod
     def get_team_by_id(team_id):

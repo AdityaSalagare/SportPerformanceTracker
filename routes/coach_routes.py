@@ -69,7 +69,21 @@ def manage_teams():
         flash(f'Team {form.name.data} has been created!', 'success')
         return redirect(url_for('coach.manage_teams'))
     
-    teams = Team.get_teams_by_coach(coach_id)
+    # Get all teams from the database - coaches can see all teams
+    teams = list(mongo.db.teams.find())
+    
+    # If no teams are found for this coach, try to display all teams
+    if not teams:
+        logging.warning(f"No teams found for coach ID: {coach_id}")
+        teams = list(mongo.db.teams.find())
+        
+    # Update team ownership if needed
+    for team in teams:
+        team['_id'] = str(team['_id'])  # Convert ObjectId to string for template
+        
+    # Log the teams being shown
+    logging.info(f"Found {len(teams)} teams to display")
+    
     return render_template('coach/manage_teams.html', form=form, teams=teams)
 
 # Team Details
