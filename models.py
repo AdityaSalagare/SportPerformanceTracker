@@ -35,7 +35,8 @@ class Team:
             "description": description,
             "created_at": datetime.now(),
             "athletes": [],
-            "metrics": []
+            "metrics": [],
+            "athlete_details": []  # For storing roles and additional player info
         }
         result = mongo.db.teams.insert_one(team_data)
         return str(result.inserted_id)
@@ -49,15 +50,67 @@ class Team:
         return mongo.db.teams.find_one({"_id": ObjectId(team_id)})
     
     @staticmethod
-    def add_athlete_to_team(team_id, athlete_id):
+    def add_athlete_to_team(team_id, athlete_id, role=None):
         team = mongo.db.teams.find_one({"_id": ObjectId(team_id)})
         if team and athlete_id not in team.get('athletes', []):
+            # Add athlete to team
             mongo.db.teams.update_one(
                 {"_id": ObjectId(team_id)},
                 {"$push": {"athletes": athlete_id}}
             )
+            
+            # If role is provided, add athlete details
+            if role:
+                athlete_detail = {
+                    "athlete_id": athlete_id,
+                    "role": role,
+                    "added_at": datetime.now()
+                }
+                mongo.db.teams.update_one(
+                    {"_id": ObjectId(team_id)},
+                    {"$push": {"athlete_details": athlete_detail}}
+                )
             return True
         return False
+    
+    @staticmethod
+    def update_athlete_role(team_id, athlete_id, role):
+        """Update an athlete's role within a team"""
+        # Check if athlete is already in team with a role
+        team = mongo.db.teams.find_one({
+            "_id": ObjectId(team_id),
+            "athlete_details.athlete_id": athlete_id
+        })
+        
+        if team:
+            # Update existing role
+            mongo.db.teams.update_one(
+                {
+                    "_id": ObjectId(team_id), 
+                    "athlete_details.athlete_id": athlete_id
+                },
+                {"$set": {"athlete_details.$.role": role}}
+            )
+        else:
+            # Check if athlete is in the team without role details
+            team = mongo.db.teams.find_one({
+                "_id": ObjectId(team_id),
+                "athletes": athlete_id
+            })
+            
+            if team:
+                # Add new role details
+                athlete_detail = {
+                    "athlete_id": athlete_id,
+                    "role": role,
+                    "added_at": datetime.now()
+                }
+                mongo.db.teams.update_one(
+                    {"_id": ObjectId(team_id)},
+                    {"$push": {"athlete_details": athlete_detail}}
+                )
+        
+        return True
         
     @staticmethod
     def add_metric_to_team(team_id, metric_name, metric_description, metric_unit, min_value=0, max_value=100):
@@ -74,6 +127,185 @@ class Team:
             {"$push": {"metrics": metric}}
         )
         return True
+    
+    @staticmethod
+    def add_cricket_metrics(team_id):
+        """Add standard cricket metrics to a team"""
+        cricket_metrics = [
+            # Batting metrics
+            {
+                "name": "batting_average",
+                "description": "Average runs scored per dismissal",
+                "unit": "runs",
+                "min_value": 0,
+                "max_value": 100,
+                "created_at": datetime.now()
+            },
+            {
+                "name": "strike_rate",
+                "description": "Runs scored per 100 balls faced",
+                "unit": "",
+                "min_value": 0,
+                "max_value": 200,
+                "created_at": datetime.now()
+            },
+            {
+                "name": "runs_scored",
+                "description": "Total runs scored in match/session",
+                "unit": "runs",
+                "min_value": 0,
+                "max_value": 500,
+                "created_at": datetime.now()
+            },
+            {
+                "name": "centuries",
+                "description": "Number of innings with 100+ runs",
+                "unit": "count",
+                "min_value": 0,
+                "max_value": 50,
+                "created_at": datetime.now()
+            },
+            {
+                "name": "half_centuries",
+                "description": "Number of innings with 50-99 runs",
+                "unit": "count",
+                "min_value": 0,
+                "max_value": 100,
+                "created_at": datetime.now()
+            },
+            {
+                "name": "boundaries",
+                "description": "Number of 4s hit",
+                "unit": "count",
+                "min_value": 0,
+                "max_value": 50,
+                "created_at": datetime.now()
+            },
+            {
+                "name": "sixes",
+                "description": "Number of 6s hit",
+                "unit": "count",
+                "min_value": 0,
+                "max_value": 30,
+                "created_at": datetime.now()
+            },
+            
+            # Bowling metrics
+            {
+                "name": "bowling_average",
+                "description": "Runs conceded per wicket taken",
+                "unit": "",
+                "min_value": 0,
+                "max_value": 100,
+                "created_at": datetime.now()
+            },
+            {
+                "name": "economy_rate",
+                "description": "Runs conceded per over",
+                "unit": "runs/over",
+                "min_value": 0,
+                "max_value": 15,
+                "created_at": datetime.now()
+            },
+            {
+                "name": "bowling_speed",
+                "description": "Speed of delivery",
+                "unit": "km/h",
+                "min_value": 80,
+                "max_value": 160,
+                "created_at": datetime.now()
+            },
+            {
+                "name": "wickets_taken",
+                "description": "Number of wickets taken",
+                "unit": "count",
+                "min_value": 0,
+                "max_value": 10,
+                "created_at": datetime.now()
+            },
+            {
+                "name": "dot_balls_percentage",
+                "description": "Percentage of deliveries with no runs scored",
+                "unit": "%",
+                "min_value": 0,
+                "max_value": 100,
+                "created_at": datetime.now()
+            },
+            {
+                "name": "maidens",
+                "description": "Number of overs with no runs conceded",
+                "unit": "count",
+                "min_value": 0,
+                "max_value": 10,
+                "created_at": datetime.now()
+            },
+            {
+                "name": "extras_conceded",
+                "description": "Number of extra runs conceded (wides, no-balls)",
+                "unit": "runs",
+                "min_value": 0,
+                "max_value": 30,
+                "created_at": datetime.now()
+            },
+            
+            # Fielding metrics
+            {
+                "name": "catches_taken",
+                "description": "Number of catches taken",
+                "unit": "count",
+                "min_value": 0,
+                "max_value": 10,
+                "created_at": datetime.now()
+            },
+            {
+                "name": "run_outs",
+                "description": "Number of run outs executed",
+                "unit": "count",
+                "min_value": 0,
+                "max_value": 5,
+                "created_at": datetime.now()
+            },
+            {
+                "name": "fielding_accuracy",
+                "description": "Accuracy of throws and fielding",
+                "unit": "%",
+                "min_value": 0,
+                "max_value": 100,
+                "created_at": datetime.now()
+            }
+        ]
+        
+        # Add all cricket metrics to the team
+        mongo.db.teams.update_one(
+            {"_id": ObjectId(team_id)},
+            {"$push": {"metrics": {"$each": cricket_metrics}}}
+        )
+        
+        return True
+    
+    @staticmethod
+    def get_athlete_role(team_id, athlete_id):
+        """Get an athlete's role within a team"""
+        team = mongo.db.teams.find_one({"_id": ObjectId(team_id)})
+        if not team:
+            return None
+        
+        for athlete_detail in team.get('athlete_details', []):
+            if athlete_detail.get('athlete_id') == athlete_id:
+                return athlete_detail.get('role')
+        
+        return None
+    
+    @staticmethod
+    def get_team_roles():
+        """Get list of cricket player roles"""
+        return [
+            "batsman", 
+            "bowler", 
+            "all_rounder", 
+            "wicket_keeper", 
+            "captain"
+        ]
 
 class Performance:
     @staticmethod

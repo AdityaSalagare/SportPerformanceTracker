@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash, session, jsonify
+from flask import Blueprint, render_template, redirect, url_for, request, flash, session, jsonify, send_file, Response
 from app import mongo
 from models import Team, User, Performance, Notification
 from forms import TeamForm, MetricForm, AthleteForm, PerformanceForm, ReportForm
@@ -11,6 +11,7 @@ from functools import wraps
 import json
 from bson import json_util
 import logging
+from utils import evaluate_athlete, export_team_data_to_excel, export_athlete_data_to_excel
 
 coach_bp = Blueprint('coach', __name__, url_prefix='/coach')
 
@@ -310,6 +311,108 @@ def reports():
     
     return render_template('coach/reports.html', form=form, teams=teams)
 
+# Add Cricket Metrics
+@coach_bp.route('/team/<team_id>/add_cricket_metrics')
+@coach_required
+def add_cricket_metrics(team_id):
+    team = Team.get_team_by_id(team_id)
+    if not team:
+        flash('Team not found', 'danger')
+        return redirect(url_for('coach.manage_teams'))
+    
+    # Add cricket metrics
+    Team.add_cricket_metrics(team_id)
+    flash('Cricket metrics have been added to the team!', 'success')
+    return redirect(url_for('coach.manage_metrics', team_id=team_id))
+
+# Update athlete role (ajax endpoint)
+@coach_bp.route('/api/update_athlete_role', methods=['POST'])
+@coach_required
+def update_athlete_role():
+    data = request.json
+    team_id = data.get('team_id')
+    athlete_id = data.get('athlete_id')
+    role = data.get('role')
+    
+    if not team_id or not athlete_id or not role:
+        return jsonify({'success': False, 'message': 'Missing required data'})
+    
+    # Update role
+    Team.update_athlete_role(team_id, athlete_id, role)
+    return jsonify({'success': True})
+
+# Athlete Evaluation
+@coach_bp.route('/athlete/<athlete_id>/evaluate', methods=['GET'])
+@coach_required
+def evaluate_athlete_view(athlete_id):
+    athlete = User.find_by_id(athlete_id)
+    if not athlete:
+        flash('Athlete not found', 'danger')
+        return redirect(url_for('coach.dashboard'))
+    
+    # Get teams this athlete belongs to
+    teams = list(mongo.db.teams.find({'athletes': athlete_id}))
+    
+    # Get team_id from query parameter if available
+    team_id = request.args.get('team_id')
+    
+    # Run evaluation
+    evaluation = evaluate_athlete(athlete_id, team_id)
+    
+    return render_template('coach/athlete_evaluation.html', 
+                          athlete=athlete,
+                          teams=teams,
+                          evaluation=evaluation,
+                          current_team_id=team_id)
+
+# Team Excel Export
+@coach_bp.route('/team/<team_id>/export_excel')
+@coach_required
+def export_team_excel(team_id):
+    team = Team.get_team_by_id(team_id)
+    if not team:
+        flash('Team not found', 'danger')
+        return redirect(url_for('coach.manage_teams'))
+    
+    # Generate Excel file
+    excel_bytes = export_team_data_to_excel(team_id)
+    if not excel_bytes:
+        flash('Failed to generate Excel report', 'danger')
+        return redirect(url_for('coach.team_detail', team_id=team_id))
+    
+    # Send file
+    filename = f"{team['name'].replace(' ', '_')}_report_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    return send_file(
+        excel_bytes,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+# Athlete Excel Export
+@coach_bp.route('/athlete/<athlete_id>/export_excel')
+@coach_required
+def export_athlete_excel(athlete_id):
+    athlete = User.find_by_id(athlete_id)
+    if not athlete:
+        flash('Athlete not found', 'danger')
+        return redirect(url_for('coach.dashboard'))
+    
+    # Generate Excel file
+    excel_bytes = export_athlete_data_to_excel(athlete_id)
+    if not excel_bytes:
+        flash('Failed to generate Excel report', 'danger')
+        return redirect(url_for('coach.athlete_detail', athlete_id=athlete_id))
+    
+    # Send file
+    filename = f"{athlete['username'].replace(' ', '_')}_report_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    return send_file(
+        excel_bytes,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
 # AJAX endpoint for chart data
 @coach_bp.route('/api/performance_data/<team_id>/<metric_name>')
 @coach_required
@@ -326,6 +429,14 @@ def performance_data(team_id, metric_name):
         })
     
     return jsonify(data)
+
+# AJAX endpoint for athlete score data
+@coach_bp.route('/api/athlete_evaluation/<athlete_id>')
+@coach_required
+def athlete_evaluation_data(athlete_id):
+    team_id = request.args.get('team_id')
+    evaluation = evaluate_athlete(athlete_id, team_id)
+    return jsonify(evaluation)
 
 # Notifications
 @coach_bp.route('/notifications')
