@@ -1,0 +1,303 @@
+{% extends 'base.html' %}
+
+{% block title %} - Performance History{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('athlete.dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('athlete.team_stats', team_id=team._id) }}">{{ team.name }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ metric.name }} History</li>
+            </ol>
+        </nav>
+        <h1 class="display-5">
+            <i class="fas fa-history me-2"></i>{{ metric.name }} History
+        </h1>
+        <p class="lead text-muted">Track your progress over time</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('athlete.compare', team_id=team._id, metric_name=metric.name) }}" class="btn btn-primary">
+            <i class="fas fa-chart-bar me-2"></i>Compare with Team
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 mb-4">
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Performance Trend</h5>
+            </div>
+            <div class="card-body">
+                {% if performances|length > 0 %}
+                    <canvas id="historyChart" height="300"></canvas>
+                {% else %}
+                    <div class="text-center py-5">
+                        <div class="mb-3">
+                            <i class="fas fa-chart-line fa-4x text-muted"></i>
+                        </div>
+                        <h5>No performance data yet</h5>
+                        <p class="text-muted">Performance data will appear once recorded by your coach</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 mb-4">
+        <div class="card bg-dark border-0 shadow h-100">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Metric Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Name:</strong> {{ metric.name }}</p>
+                <p><strong>Unit:</strong> {{ metric.unit }}</p>
+                <p><strong>Range:</strong> {{ metric.min_value }} - {{ metric.max_value }}</p>
+                
+                {% if metric.description %}
+                    <p><strong>Description:</strong> {{ metric.description }}</p>
+                {% endif %}
+                
+                <hr>
+                
+                {% if performances|length > 0 %}
+                    <h6 class="mb-3">Performance Stats</h6>
+                    
+                    {% set values = [] %}
+                    {% for perf in performances %}
+                        {% set values = values + [perf.value] %}
+                    {% endfor %}
+                    
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <div class="card bg-secondary bg-opacity-25 border-0">
+                                <div class="card-body text-center p-3">
+                                    <h6 class="card-title small mb-1">Highest</h6>
+                                    <div class="display-6">{{ values|max }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-6 mb-3">
+                            <div class="card bg-secondary bg-opacity-25 border-0">
+                                <div class="card-body text-center p-3">
+                                    <h6 class="card-title small mb-1">Lowest</h6>
+                                    <div class="display-6">{{ values|min }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-6 mb-3">
+                            <div class="card bg-secondary bg-opacity-25 border-0">
+                                <div class="card-body text-center p-3">
+                                    <h6 class="card-title small mb-1">Average</h6>
+                                    <div class="display-6">{{ (values|sum / values|length)|round(1) }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-6 mb-3">
+                            <div class="card bg-secondary bg-opacity-25 border-0">
+                                <div class="card-body text-center p-3">
+                                    <h6 class="card-title small mb-1">Recent</h6>
+                                    <div class="display-6">{{ performances[0].value }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if performances|length >= 2 %}
+                        {% set first_value = performances[-1].value %}
+                        {% set last_value = performances[0].value %}
+                        {% set change = ((last_value - first_value) / first_value * 100) if first_value != 0 else 0 %}
+                        
+                        <div class="card bg-secondary bg-opacity-25 border-0 mt-2">
+                            <div class="card-body text-center">
+                                <h6 class="card-title small mb-1">Overall Improvement</h6>
+                                <div class="display-6">
+                                    {% if change > 0 %}
+                                        <i class="fas fa-arrow-up text-success me-1"></i>{{ change|round(1) }}%
+                                    {% elif change < 0 %}
+                                        <i class="fas fa-arrow-down text-danger me-1"></i>{{ (change * -1)|round(1) }}%
+                                    {% else %}
+                                        <i class="fas fa-equals text-warning me-1"></i>0%
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">Since {{ performances[-1].recorded_at.strftime('%Y-%m-%d') }}</small>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                        <p>No performance data available</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Record Table -->
+<div class="card bg-dark border-0 shadow">
+    <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Performance Records</h5>
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="sortToggle">
+            <label class="form-check-label" for="sortToggle">Sort Oldest First</label>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if performances|length > 0 %}
+            <div class="table-responsive">
+                <table class="table table-dark table-hover" id="performanceTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Value</th>
+                            <th>Notes</th>
+                            <th>Change</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for perf in performances %}
+                            <tr>
+                                <td>{{ perf.recorded_at.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ perf.value }}</td>
+                                <td>{{ perf.notes or '-' }}</td>
+                                <td>
+                                    {% if loop.index < performances|length %}
+                                        {% set prev_value = performances[loop.index].value %}
+                                        {% set change = ((perf.value - prev_value) / prev_value * 100) if prev_value != 0 else 0 %}
+                                        
+                                        {% if change > 0 %}
+                                            <span class="text-success">+{{ change|round(1) }}%</span>
+                                        {% elif change < 0 %}
+                                            <span class="text-danger">{{ change|round(1) }}%</span>
+                                        {% else %}
+                                            <span class="text-secondary">0%</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-table fa-3x text-muted mb-3"></i>
+                <p>No performance records available</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Create history chart
+    const performances = {{ performances|tojson }};
+    
+    if (performances.length > 0) {
+        const ctx = document.getElementById('historyChart').getContext('2d');
+        
+        // Prepare data (reversed to show oldest first)
+        const sortedPerformances = [...performances].reverse();
+        
+        const dates = sortedPerformances.map(p => new Date(p.recorded_at.$date).toISOString().split('T')[0]);
+        const values = sortedPerformances.map(p => p.value);
+        
+        // Create the chart
+        const historyChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: '{{ metric.name }} ({{ metric.unit }})',
+                    data: values,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function(context) {
+                                const index = context.dataIndex;
+                                if (index > 0) {
+                                    const currentValue = values[index];
+                                    const prevValue = values[index - 1];
+                                    const change = ((currentValue - prevValue) / prevValue * 100).toFixed(1);
+                                    return `Change: ${change > 0 ? '+' : ''}${change}%`;
+                                }
+                                return '';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: {{ 'true' if metric.min_value <= 0 else 'false' }},
+                        title: {
+                            display: true,
+                            text: '{{ metric.name }} ({{ metric.unit }})'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Toggle sort order
+        const sortToggle = document.getElementById('sortToggle');
+        const performanceTable = document.getElementById('performanceTable');
+        
+        if (sortToggle && performanceTable) {
+            sortToggle.addEventListener('change', function() {
+                const tbody = performanceTable.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                
+                // Remove all rows
+                rows.forEach(row => row.remove());
+                
+                // Add back in reverse order if checked
+                if (this.checked) {
+                    rows.reverse().forEach(row => tbody.appendChild(row));
+                } else {
+                    rows.forEach(row => tbody.appendChild(row));
+                }
+                
+                // Update chart data order too
+                const chartPerformances = this.checked ? performances : [...performances].reverse();
+                
+                historyChart.data.labels = chartPerformances.map(p => 
+                    new Date(p.recorded_at.$date).toISOString().split('T')[0]
+                );
+                historyChart.data.datasets[0].data = chartPerformances.map(p => p.value);
+                historyChart.update();
+            });
+        }
+    }
+});
+</script>
+{% endblock %}

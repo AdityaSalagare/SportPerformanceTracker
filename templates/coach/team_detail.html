@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+
+{% block title %} - Team Details{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('coach.dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('coach.manage_teams') }}">Teams</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ team.name }}</li>
+            </ol>
+        </nav>
+        <h1 class="display-5">
+            <i class="fas fa-users me-2"></i>{{ team.name }}
+        </h1>
+        <p class="lead text-muted">{{ team.sport }} Team</p>
+    </div>
+    <div class="col-auto">
+        <div class="btn-group">
+            <a href="{{ url_for('coach.add_athlete', team_id=team._id) }}" class="btn btn-success">
+                <i class="fas fa-user-plus me-2"></i>Add Athlete
+            </a>
+            <a href="{{ url_for('coach.manage_metrics', team_id=team._id) }}" class="btn btn-primary">
+                <i class="fas fa-chart-bar me-2"></i>Manage Metrics
+            </a>
+            <a href="{{ url_for('coach.record_performance', team_id=team._id) }}" class="btn btn-info">
+                <i class="fas fa-stopwatch me-2"></i>Record Performance
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Team Information</h5>
+                <a href="#" class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#editTeamModal">
+                    <i class="fas fa-edit"></i>
+                </a>
+            </div>
+            <div class="card-body">
+                <p><strong>Sport:</strong> {{ team.sport }}</p>
+                <p><strong>Created:</strong> {{ team.created_at.strftime('%Y-%m-%d') }}</p>
+                <p><strong>Athletes:</strong> {{ team.athletes|length }}</p>
+                <p><strong>Metrics:</strong> {{ team.metrics|length }}</p>
+                
+                {% if team.description %}
+                    <p><strong>Description:</strong> {{ team.description }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Team Metrics -->
+        <div class="card bg-dark border-0 shadow mt-4">
+            <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Team Metrics</h5>
+                <a href="{{ url_for('coach.manage_metrics', team_id=team._id) }}" class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-plus"></i>
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if team.metrics %}
+                    <div class="list-group list-group-flush">
+                        {% for metric in team.metrics %}
+                            <div class="list-group-item bg-dark text-white border-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ metric.name }}</h6>
+                                        <small class="text-muted">{{ metric.description }}</small>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-secondary">{{ metric.unit }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                        <p>No metrics defined yet</p>
+                        <a href="{{ url_for('coach.manage_metrics', team_id=team._id) }}" class="btn btn-sm btn-primary">Add Metrics</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <!-- Team Members -->
+        <div class="card bg-dark border-0 shadow mb-4">
+            <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Team Members</h5>
+                <a href="{{ url_for('coach.add_athlete', team_id=team._id) }}" class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-plus"></i>
+                </a>
+            </div>
+            <div class="card-body">
+                {% if athletes %}
+                    <div class="row row-cols-1 row-cols-md-3 g-4">
+                        {% for athlete in athletes %}
+                            <div class="col">
+                                <div class="card h-100 bg-secondary bg-opacity-25 border-0">
+                                    <div class="card-body text-center">
+                                        <div class="mb-3">
+                                            <i class="fas fa-user-circle fa-4x text-primary"></i>
+                                        </div>
+                                        <h5 class="card-title">{{ athlete.username }}</h5>
+                                        <p class="card-text text-muted small">{{ athlete.email }}</p>
+                                        <a href="{{ url_for('coach.athlete_detail', athlete_id=athlete._id) }}" class="btn btn-sm btn-outline-light mt-2">
+                                            View Profile
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <div class="mb-3">
+                            <i class="fas fa-users fa-4x text-muted"></i>
+                        </div>
+                        <h5>No athletes in this team yet</h5>
+                        <p class="text-muted">Add athletes to start tracking their performance</p>
+                        <a href="{{ url_for('coach.add_athlete', team_id=team._id) }}" class="btn btn-primary">Add Athletes</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Recent Performances -->
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Performances</h5>
+                <a href="{{ url_for('coach.record_performance', team_id=team._id) }}" class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-plus"></i>
+                </a>
+            </div>
+            <div class="card-body">
+                {% if performances %}
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Athlete</th>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for perf in performances[:10] %}
+                                <tr>
+                                    <td>{{ perf.recorded_at.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        {% for athlete in athletes %}
+                                            {% if athlete._id|string == perf.athlete_id %}
+                                                {{ athlete.username }}
+                                            {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                    <td>{{ perf.metric_name }}</td>
+                                    <td>{{ perf.value }}</td>
+                                    <td>{{ perf.notes or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {% if performances|length > 10 %}
+                        <div class="text-center mt-3">
+                            <a href="{{ url_for('coach.reports', team_id=team._id) }}" class="btn btn-sm btn-outline-light">
+                                View All Performances
+                            </a>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                        <p>No performance data recorded yet</p>
+                        <a href="{{ url_for('coach.record_performance', team_id=team._id) }}" class="btn btn-primary">Record Performance</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Team Modal -->
+<div class="modal fade" id="editTeamModal" tabindex="-1" aria-labelledby="editTeamModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editTeamModalLabel">Edit Team Information</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editTeamForm">
+                    <div class="mb-3">
+                        <label for="teamName" class="form-label">Team Name</label>
+                        <input type="text" class="form-control" id="teamName" value="{{ team.name }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="teamSport" class="form-label">Sport</label>
+                        <input type="text" class="form-control" id="teamSport" value="{{ team.sport }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="teamDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="teamDescription" rows="3">{{ team.description }}</textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveTeamBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle edit team form submission
+    const saveTeamBtn = document.getElementById('saveTeamBtn');
+    if (saveTeamBtn) {
+        saveTeamBtn.addEventListener('click', function() {
+            // In a real application, this would submit the form to the server
+            // For this demo, just show a success message and close the modal
+            alert('Team information updated successfully!');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editTeamModal'));
+            modal.hide();
+        });
+    }
+});
+</script>
+{% endblock %}

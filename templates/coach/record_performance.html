@@ -1,0 +1,377 @@
+{% extends 'base.html' %}
+
+{% block title %} - Record Performance{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('coach.dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('coach.manage_teams') }}">Teams</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('coach.team_detail', team_id=team._id) }}">{{ team.name }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Record Performance</li>
+            </ol>
+        </nav>
+        <h1 class="display-5"><i class="fas fa-stopwatch me-2"></i>Record Performance</h1>
+        <p class="lead text-muted">Track athlete performance for {{ team.name }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Record New Performance</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('coach.record_performance', team_id=team._id) }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label for="athlete_id" class="form-label">Athlete</label>
+                        {{ form.athlete_id(class="form-select") }}
+                        {% if form.athlete_id.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.athlete_id.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="metric_name" class="form-label">Metric</label>
+                        {{ form.metric_name(class="form-select", id="metric_select") }}
+                        {% if form.metric_name.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.metric_name.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="value" class="form-label">Value <span id="metric_unit">(unit)</span></label>
+                        {{ form.value(class="form-control") }}
+                        {% if form.value.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.value.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text" id="valueRange"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes (Optional)</label>
+                        {{ form.notes(class="form-control", rows="3", placeholder="Additional observations or context") }}
+                        {% if form.notes.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.notes.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card bg-dark border-0 shadow mb-4">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Performance Context</h5>
+            </div>
+            <div class="card-body">
+                <div id="athleteHistory" class="mb-4">
+                    <h6 class="border-bottom pb-2 mb-3">Athlete History</h6>
+                    <div class="text-center py-3" id="athleteHistoryContent">
+                        <p class="text-muted">Select an athlete to view their performance history</p>
+                    </div>
+                </div>
+                
+                <div id="metricInfo">
+                    <h6 class="border-bottom pb-2 mb-3">Metric Information</h6>
+                    <div class="text-center py-3" id="metricInfoContent">
+                        <p class="text-muted">Select a metric to view details</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Team Average Performance</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="teamAverageChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const metricSelect = document.getElementById('metric_select');
+    const unitSpan = document.getElementById('metric_unit');
+    const valueRangeDiv = document.getElementById('valueRange');
+    const athleteSelect = document.getElementById('athlete_id');
+    
+    // Store metric information
+    const metrics = {{ metrics|tojson }};
+    
+    // Update metric unit and range when metric changes
+    if (metricSelect) {
+        metricSelect.addEventListener('change', function() {
+            const selectedMetric = this.value;
+            const metricInfo = metrics.find(m => m.name === selectedMetric);
+            
+            if (metricInfo) {
+                unitSpan.textContent = `(${metricInfo.unit})`;
+                valueRangeDiv.textContent = `Expected range: ${metricInfo.min_value} - ${metricInfo.max_value}`;
+                
+                // Update metric info section
+                const metricInfoContent = document.getElementById('metricInfoContent');
+                metricInfoContent.innerHTML = `
+                    <div class="text-start">
+                        <p><strong>Name:</strong> ${metricInfo.name}</p>
+                        <p><strong>Description:</strong> ${metricInfo.description || 'No description available'}</p>
+                        <p><strong>Unit:</strong> ${metricInfo.unit}</p>
+                        <p><strong>Range:</strong> ${metricInfo.min_value} - ${metricInfo.max_value}</p>
+                    </div>
+                `;
+                
+                // Update team average chart
+                updateTeamAverageChart(selectedMetric);
+            } else {
+                unitSpan.textContent = '(unit)';
+                valueRangeDiv.textContent = '';
+                
+                document.getElementById('metricInfoContent').innerHTML = `
+                    <p class="text-muted">No information available for this metric</p>
+                `;
+            }
+        });
+        
+        // Trigger change to initialize values
+        if (metricSelect.value) {
+            metricSelect.dispatchEvent(new Event('change'));
+        }
+    }
+    
+    // Update athlete history when athlete changes
+    if (athleteSelect) {
+        athleteSelect.addEventListener('change', function() {
+            const selectedAthleteId = this.value;
+            const selectedAthleteName = this.options[this.selectedIndex].text;
+            const athleteHistoryContent = document.getElementById('athleteHistoryContent');
+            
+            if (selectedAthleteId) {
+                // Show loading indicator
+                athleteHistoryContent.innerHTML = `
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                `;
+                
+                // Fetch athlete performance history
+                fetch(`/coach/api/athlete_performance/${selectedAthleteId}/{{ team._id }}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.length > 0) {
+                            // Create summary of recent performances
+                            let html = `<div class="text-start"><h6>${selectedAthleteName}'s Recent Performances:</h6><ul class="list-unstyled">`;
+                            
+                            // Group by metric
+                            const metricPerformances = {};
+                            data.forEach(p => {
+                                if (!metricPerformances[p.metric_name]) {
+                                    metricPerformances[p.metric_name] = [];
+                                }
+                                metricPerformances[p.metric_name].push(p);
+                            });
+                            
+                            // Show most recent for each metric (max 3 metrics)
+                            Object.entries(metricPerformances).slice(0, 3).forEach(([metric, performances]) => {
+                                const latest = performances[0];
+                                const date = new Date(latest.recorded_at.$date).toLocaleDateString();
+                                html += `<li class="mb-2">
+                                    <i class="fas fa-chart-line text-primary me-2"></i>
+                                    ${metric}: <strong>${latest.value}</strong> <small class="text-muted">(${date})</small>
+                                </li>`;
+                            });
+                            
+                            html += `</ul>`;
+                            
+                            // Add trend indicators
+                            const metricTrends = calculateTrends(data);
+                            if (Object.keys(metricTrends).length > 0) {
+                                html += `<h6 class="mt-3">Performance Trends:</h6><ul class="list-unstyled">`;
+                                
+                                Object.entries(metricTrends).forEach(([metric, trend]) => {
+                                    let trendIcon, trendColor;
+                                    if (trend > 5) {
+                                        trendIcon = 'fa-arrow-trend-up';
+                                        trendColor = 'text-success';
+                                    } else if (trend < -5) {
+                                        trendIcon = 'fa-arrow-trend-down';
+                                        trendColor = 'text-danger';
+                                    } else {
+                                        trendIcon = 'fa-arrow-right';
+                                        trendColor = 'text-warning';
+                                    }
+                                    
+                                    html += `<li class="mb-2">
+                                        <i class="fas ${trendIcon} ${trendColor} me-2"></i>
+                                        ${metric}: <span class="${trendColor}">${trend > 0 ? '+' : ''}${trend.toFixed(1)}%</span>
+                                    </li>`;
+                                });
+                                
+                                html += `</ul>`;
+                            }
+                            
+                            html += `</div>`;
+                            athleteHistoryContent.innerHTML = html;
+                        } else {
+                            athleteHistoryContent.innerHTML = `
+                                <p class="text-muted">No performance history available for this athlete</p>
+                            `;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching athlete history:', error);
+                        athleteHistoryContent.innerHTML = `
+                            <p class="text-danger">Error loading athlete history</p>
+                        `;
+                    });
+            } else {
+                athleteHistoryContent.innerHTML = `
+                    <p class="text-muted">Select an athlete to view their performance history</p>
+                `;
+            }
+        });
+        
+        // Trigger change to initialize values
+        if (athleteSelect.value) {
+            athleteSelect.dispatchEvent(new Event('change'));
+        }
+    }
+    
+    // Function to calculate performance trends
+    function calculateTrends(performances) {
+        const trends = {};
+        
+        // Group by metric
+        const metricPerformances = {};
+        performances.forEach(p => {
+            if (!metricPerformances[p.metric_name]) {
+                metricPerformances[p.metric_name] = [];
+            }
+            metricPerformances[p.metric_name].push(p);
+        });
+        
+        // Calculate trends for each metric with enough data
+        Object.entries(metricPerformances).forEach(([metric, perfs]) => {
+            if (perfs.length >= 2) {
+                // Sort by date (oldest first)
+                perfs.sort((a, b) => new Date(a.recorded_at.$date) - new Date(b.recorded_at.$date));
+                
+                // Calculate percentage change from first to last
+                const first = perfs[0].value;
+                const last = perfs[perfs.length - 1].value;
+                
+                if (first !== 0) {
+                    const percentChange = ((last - first) / Math.abs(first)) * 100;
+                    trends[metric] = percentChange;
+                }
+            }
+        });
+        
+        return trends;
+    }
+    
+    // Function to update team average chart
+    function updateTeamAverageChart(metricName) {
+        // Fetch team average data for this metric
+        fetch(`/coach/api/team_average/{{ team._id }}/${metricName}`)
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('teamAverageChart').getContext('2d');
+                
+                // If there's an existing chart, destroy it
+                if (window.teamChart) {
+                    window.teamChart.destroy();
+                }
+                
+                if (data.length === 0) {
+                    // No data available
+                    document.getElementById('teamAverageChart').style.display = 'none';
+                    return;
+                }
+                
+                document.getElementById('teamAverageChart').style.display = 'block';
+                
+                // Prepare chart data
+                data.sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                window.teamChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.map(d => d.date),
+                        datasets: [{
+                            label: `Team Average - ${metricName}`,
+                            data: data.map(d => d.value),
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Value'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Date'
+                                }
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching team average data:', error);
+            });
+    }
+});
+</script>
+{% endblock %}

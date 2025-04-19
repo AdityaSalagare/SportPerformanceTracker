@@ -1,0 +1,487 @@
+{% extends 'base.html' %}
+
+{% block title %} - My Profile{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('athlete.dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">My Profile</li>
+            </ol>
+        </nav>
+        <h1 class="display-5">
+            <i class="fas fa-user-circle me-2"></i>My Profile
+        </h1>
+        <p class="lead text-muted">View and track your performance metrics</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Personal Information -->
+    <div class="col-lg-4 mb-4">
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Personal Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="avatar-placeholder mb-3">
+                        <i class="fas fa-user-circle fa-5x text-primary"></i>
+                    </div>
+                    <h4>{{ get_username() }}</h4>
+                    <p class="text-muted">{{ session.get('email') }}</p>
+                </div>
+                
+                <h6 class="border-bottom pb-2 mb-3">My Teams</h6>
+                {% if teams %}
+                    <div class="list-group list-group-flush mb-3">
+                        {% for team in teams %}
+                            <a href="{{ url_for('athlete.team_stats', team_id=team._id) }}" class="list-group-item list-group-item-action bg-dark text-white border-secondary">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0">{{ team.name }}</h6>
+                                        <small class="text-muted">{{ team.sport }}</small>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">{{ team.athletes|length }} teammates</span>
+                                </div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">Not a member of any team</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Performance Summary -->
+        <div class="card bg-dark border-0 shadow mt-4">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Performance Summary</h5>
+            </div>
+            <div class="card-body">
+                {% if metrics_performance %}
+                    <div class="row">
+                        {% for metric, perfs in metrics_performance.items() %}
+                            {% if perfs|length > 0 %}
+                                {% set latest = perfs[0] %}
+                                {% if perfs|length > 1 %}
+                                    {% set previous = perfs[1] %}
+                                    {% set change = ((latest.value - previous.value) / previous.value * 100) if previous.value != 0 else 0 %}
+                                {% else %}
+                                    {% set change = 0 %}
+                                {% endif %}
+                                
+                                <div class="col-md-6 mb-3">
+                                    <div class="card bg-secondary bg-opacity-25 border-0 h-100">
+                                        <div class="card-body">
+                                            <h6 class="card-title">{{ metric }}</h6>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div class="display-6">{{ latest.value }}</div>
+                                                {% if change > 0 %}
+                                                    <span class="badge bg-success">+{{ change|round(1) }}%</span>
+                                                {% elif change < 0 %}
+                                                    <span class="badge bg-danger">{{ change|round(1) }}%</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">0%</span>
+                                                {% endif %}
+                                            </div>
+                                            <p class="text-muted small mt-2 mb-0">
+                                                Last recorded: {{ latest.recorded_at.strftime('%Y-%m-%d') }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                        <p>No performance data recorded yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Performance History -->
+    <div class="col-lg-8">
+        <div class="card bg-dark border-0 shadow mb-4">
+            <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Performance History</h5>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-outline-light active" data-view="table">
+                        <i class="fas fa-table"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-light" data-view="chart">
+                        <i class="fas fa-chart-line"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Table View -->
+                <div id="tableView">
+                    {% if metrics_performance and metrics_performance.items()|list|length > 0 %}
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Team</th>
+                                        <th>Metric</th>
+                                        <th>Value</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for metric, perfs in metrics_performance.items() %}
+                                        {% for perf in perfs %}
+                                            <tr>
+                                                <td>{{ perf.recorded_at.strftime('%Y-%m-%d') }}</td>
+                                                <td>
+                                                    {% for team in teams %}
+                                                        {% if team._id|string == perf.team_id %}
+                                                            {{ team.name }}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </td>
+                                                <td>{{ perf.metric_name }}</td>
+                                                <td>{{ perf.value }}</td>
+                                                <td>{{ perf.notes or '-' }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="mb-3">
+                                <i class="fas fa-chart-line fa-4x text-muted"></i>
+                            </div>
+                            <h5>No performance data yet</h5>
+                            <p class="text-muted">Performance data will appear once recorded by your coach</p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Chart View -->
+                <div id="chartView" style="display: none;">
+                    {% if metrics_performance and metrics_performance.items()|list|length > 0 %}
+                        <div class="mb-3">
+                            <select id="metricFilter" class="form-select">
+                                <option value="">All Metrics</option>
+                                {% for metric in metrics_performance.keys() %}
+                                    <option value="{{ metric }}">{{ metric }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <canvas id="performanceChart" height="300"></canvas>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="mb-3">
+                                <i class="fas fa-chart-line fa-4x text-muted"></i>
+                            </div>
+                            <h5>No performance data yet</h5>
+                            <p class="text-muted">Performance data will appear once recorded by your coach</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Performance Analysis -->
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Performance Analysis</h5>
+            </div>
+            <div class="card-body">
+                {% if metrics_performance and metrics_performance.items()|list|length > 0 %}
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card bg-secondary bg-opacity-25 border-0">
+                                <div class="card-body">
+                                    <h6 class="card-title">Recent Progress</h6>
+                                    <div class="progress mt-3" style="height: 30px;">
+                                        <div id="progressBar" class="progress-bar bg-info" role="progressbar" style="width: 75%;" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">75%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <div class="card bg-secondary bg-opacity-25 border-0">
+                                <div class="card-body">
+                                    <h6 class="card-title">Performance Rating</h6>
+                                    <div class="text-center mt-3">
+                                        <div class="display-6 mb-2">
+                                            <i id="ratingIcon" class="fas fa-star text-warning"></i>
+                                            <span id="ratingValue">4.2</span>/5.0
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <h6 class="border-bottom pb-2 mb-3">Predictions & Goals</h6>
+                            <div class="prediction-container p-3 bg-secondary bg-opacity-25 rounded">
+                                <p><i class="fas fa-chart-line text-info me-2"></i> Based on your current performance data, you're likely to improve by <strong id="improvementRate">8-10%</strong> in the next 3 months if you maintain consistent training.</p>
+                                <p><i class="fas fa-bullseye text-danger me-2"></i> <strong>Suggested Goal:</strong> Improve your <span id="focusMetric">Speed</span> by 15% in the next 60 days.</p>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                        <h5>Insufficient data for analysis</h5>
+                        <p class="text-muted">More performance data is needed to generate insights</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle between table and chart views
+    const tableViewBtn = document.querySelector('button[data-view="table"]');
+    const chartViewBtn = document.querySelector('button[data-view="chart"]');
+    const tableView = document.getElementById('tableView');
+    const chartView = document.getElementById('chartView');
+    
+    if (tableViewBtn && chartViewBtn) {
+        tableViewBtn.addEventListener('click', function() {
+            tableView.style.display = 'block';
+            chartView.style.display = 'none';
+            tableViewBtn.classList.add('active');
+            chartViewBtn.classList.remove('active');
+        });
+        
+        chartViewBtn.addEventListener('click', function() {
+            tableView.style.display = 'none';
+            chartView.style.display = 'block';
+            chartViewBtn.classList.add('active');
+            tableViewBtn.classList.remove('active');
+            
+            // Initialize chart if needed
+            initializeChart();
+        });
+    }
+    
+    // Chart initialization
+    let performanceChart = null;
+    
+    function initializeChart() {
+        if (!document.getElementById('performanceChart') || performanceChart) return;
+        
+        // Convert performance data from Jinja to JS
+        const metricsPerformance = {{ metrics_performance|tojson }};
+        if (Object.keys(metricsPerformance).length === 0) return;
+        
+        // Prepare datasets for each metric
+        const datasets = [];
+        const allDates = new Set();
+        
+        Object.entries(metricsPerformance).forEach(([metric, performances], index) => {
+            // Generate a color
+            const hue = (index * 137) % 360;
+            const color = `hsl(${hue}, 70%, 60%)`;
+            
+            // Process performances
+            const data = [];
+            
+            performances.forEach(perf => {
+                const date = new Date(perf.recorded_at.$date).toISOString().split('T')[0];
+                allDates.add(date);
+                
+                data.push({
+                    x: date,
+                    y: perf.value
+                });
+            });
+            
+            // Sort by date
+            data.sort((a, b) => new Date(a.x) - new Date(b.x));
+            
+            datasets.push({
+                label: metric,
+                data: data,
+                borderColor: color,
+                backgroundColor: `hsla(${hue}, 70%, 10%, 0.1)`,
+                tension: 0.4
+            });
+        });
+        
+        // Create chart
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        performanceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Performance Trends Over Time'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Value'
+                        }
+                    },
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'day',
+                            displayFormats: {
+                                day: 'MMM d'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Setup metric filter
+        const metricFilter = document.getElementById('metricFilter');
+        if (metricFilter) {
+            metricFilter.addEventListener('change', function() {
+                const selectedMetric = this.value;
+                
+                if (selectedMetric === '') {
+                    // Show all metrics
+                    performanceChart.data.datasets.forEach((dataset, i) => {
+                        performanceChart.setDatasetVisibility(i, true);
+                    });
+                } else {
+                    // Show only selected metric
+                    performanceChart.data.datasets.forEach((dataset, i) => {
+                        performanceChart.setDatasetVisibility(i, dataset.label === selectedMetric);
+                    });
+                }
+                
+                performanceChart.update();
+            });
+        }
+    }
+    
+    // Initialize analysis data
+    function initializeAnalysis() {
+        const metricsPerformance = {{ metrics_performance|tojson }};
+        if (Object.keys(metricsPerformance).length === 0) return;
+        
+        // Calculate average improvement
+        let totalImprovement = 0;
+        let metricCount = 0;
+        
+        Object.entries(metricsPerformance).forEach(([metric, performances]) => {
+            if (performances.length >= 2) {
+                performances.sort((a, b) => new Date(a.recorded_at.$date) - new Date(b.recorded_at.$date));
+                
+                const first = performances[0].value;
+                const last = performances[performances.length - 1].value;
+                
+                if (first !== 0) {
+                    const improvement = ((last - first) / Math.abs(first)) * 100;
+                    totalImprovement += improvement;
+                    metricCount++;
+                }
+            }
+        });
+        
+        const avgImprovement = metricCount > 0 ? totalImprovement / metricCount : 0;
+        
+        // Update progress bar
+        const progressBar = document.getElementById('progressBar');
+        if (progressBar) {
+            // Map improvement to a 0-100 scale (cap at 100%)
+            const progressValue = Math.min(Math.max(avgImprovement, 0), 100);
+            progressBar.style.width = `${progressValue}%`;
+            progressBar.textContent = `${progressValue.toFixed(1)}%`;
+            
+            // Change color based on improvement
+            if (progressValue >= 50) {
+                progressBar.className = 'progress-bar bg-success';
+            } else if (progressValue >= 20) {
+                progressBar.className = 'progress-bar bg-info';
+            } else {
+                progressBar.className = 'progress-bar bg-warning';
+            }
+        }
+        
+        // Update rating
+        const ratingValue = document.getElementById('ratingValue');
+        if (ratingValue) {
+            // Generate a rating between 3.0 and 5.0 based on improvement
+            const rating = 3.0 + (avgImprovement / 50) * 2;
+            ratingValue.textContent = Math.min(5.0, rating).toFixed(1);
+        }
+        
+        // Update improvement prediction
+        const improvementRate = document.getElementById('improvementRate');
+        if (improvementRate) {
+            const min = Math.round(avgImprovement / 2);
+            const max = Math.round(avgImprovement);
+            improvementRate.textContent = `${min}-${max}%`;
+        }
+        
+        // Update focus metric
+        const focusMetric = document.getElementById('focusMetric');
+        if (focusMetric) {
+            // Find metric with least improvement
+            let worstMetric = '';
+            let worstImprovement = Infinity;
+            
+            Object.entries(metricsPerformance).forEach(([metric, performances]) => {
+                if (performances.length >= 2) {
+                    performances.sort((a, b) => new Date(a.recorded_at.$date) - new Date(b.recorded_at.$date));
+                    
+                    const first = performances[0].value;
+                    const last = performances[performances.length - 1].value;
+                    
+                    if (first !== 0) {
+                        const improvement = ((last - first) / Math.abs(first)) * 100;
+                        if (improvement < worstImprovement) {
+                            worstImprovement = improvement;
+                            worstMetric = metric;
+                        }
+                    }
+                }
+            });
+            
+            focusMetric.textContent = worstMetric || Object.keys(metricsPerformance)[0] || 'Speed';
+        }
+    }
+    
+    // Initialize analysis when there's performance data
+    if ({{ (metrics_performance and metrics_performance.items()|list|length > 0)|lower }}) {
+        initializeAnalysis();
+    }
+});
+</script>
+{% endblock %}

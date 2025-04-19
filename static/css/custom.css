@@ -1,0 +1,202 @@
+/**
+ * Custom styles for Sports Performance Tracker
+ */
+
+/* Global styles */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Avatar styling */
+.avatar-placeholder {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background-color: rgba(75, 192, 192, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+/* Card styling */
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card:hover, .team-card:hover {
+    transform: translateY(-5px);
+}
+
+/* Unread notification styling */
+.notification-item.unread {
+    border-left: 4px solid var(--bs-primary);
+    background-color: rgba(13, 110, 253, 0.05) !important;
+}
+
+/* Performance chart canvas */
+canvas {
+    max-width: 100%;
+}
+
+/* Team member cards */
+.team-member-card {
+    transition: all 0.3s ease;
+}
+
+.team-member-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Performance metrics */
+.metric-badge {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: 1rem;
+    display: inline-block;
+}
+
+/* Progress indicators */
+.progress {
+    height: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.progress-bar {
+    transition: width 1s ease;
+}
+
+/* Chart legends */
+.chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+/* Comparison table highlight */
+tr.highlight {
+    background-color: rgba(75, 192, 192, 0.1) !important;
+}
+
+/* Pagination styling */
+.pagination .page-item.active .page-link {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+/* Form controls in dark theme */
+.form-control, .form-select {
+    background-color: #2b3035;
+    border-color: #495057;
+    color: #fff;
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: #2b3035;
+    border-color: #86b7fe;
+    color: #fff;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Dashboard grid layout for coach/athlete dashboards */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+/* Value change indicators */
+.value-change {
+    font-size: 0.8rem;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.value-change.positive {
+    background-color: rgba(25, 135, 84, 0.1);
+    color: #198754;
+}
+
+.value-change.negative {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+}
+
+.value-change.neutral {
+    background-color: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+}
+
+/* Toast notifications */
+.toast-container {
+    z-index: 1060;
+}
+
+/* Print styles for reports */
+@media print {
+    nav, footer, .no-print {
+        display: none !important;
+    }
+    
+    body {
+        padding: 0;
+        margin: 0;
+    }
+    
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .card-header {
+        background-color: #fff !important;
+        color: #000 !important;
+        border-bottom: 1px solid #ddd !important;
+    }
+    
+    .card-body {
+        padding: 0 !important;
+    }
+    
+    .table {
+        width: 100% !important;
+        color: #000 !important;
+        border-color: #ddd !important;
+    }
+    
+    .table th, .table td {
+        background-color: #fff !important;
+        color: #000 !important;
+        border-color: #ddd !important;
+    }
+}

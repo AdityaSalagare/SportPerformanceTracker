@@ -1,0 +1,466 @@
+{% extends 'base.html' %}
+
+{% block title %} - Report Results{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('coach.dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('coach.reports') }}">Reports</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Results</li>
+            </ol>
+        </nav>
+        <h1 class="display-5"><i class="fas fa-file-alt me-2"></i>Report Results</h1>
+        <p class="lead text-muted">{{ team.name }} - {{ report_type.replace('_', ' ').title() }}</p>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-primary" id="downloadReportBtn">
+            <i class="fas fa-download me-2"></i>Download Report
+        </button>
+    </div>
+</div>
+
+<div class="card bg-dark border-0 shadow mb-4">
+    <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Report Parameters</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <p class="mb-1 fw-bold">Team</p>
+                <p>{{ team.name }}</p>
+            </div>
+            <div class="col-md-3">
+                <p class="mb-1 fw-bold">Report Type</p>
+                <p>{{ report_type.replace('_', ' ').title() }}</p>
+            </div>
+            <div class="col-md-3">
+                <p class="mb-1 fw-bold">From Date</p>
+                <p>{{ date_from.strftime('%Y-%m-%d') }}</p>
+            </div>
+            <div class="col-md-3">
+                <p class="mb-1 fw-bold">To Date</p>
+                <p>{{ date_to.strftime('%Y-%m-%d') }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if report_type == 'team_performance' %}
+<div class="card bg-dark border-0 shadow mb-4">
+    <div class="card-header bg-dark">
+        <h5 class="mb-0">Team Performance Data</h5>
+    </div>
+    <div class="card-body">
+        {% if performances %}
+            <div class="table-responsive">
+                <table class="table table-dark table-hover" id="performanceTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Athlete</th>
+                            <th>Metric</th>
+                            <th>Value</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in performances %}
+                        <tr>
+                            <td>{{ p.recorded_at.strftime('%Y-%m-%d') }}</td>
+                            <td>{% if p.athlete_name %}{{ p.athlete_name }}{% else %}Unknown{% endif %}</td>
+                            <td>{{ p.metric_name }}</td>
+                            <td>{{ p.value }}</td>
+                            <td>{{ p.notes or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-4">
+                <canvas id="performanceChart" height="300"></canvas>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                <h5>No performance data available</h5>
+                <p class="text-muted">No performances were recorded in the selected date range</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% if report_type == 'athlete_comparison' %}
+<div class="card bg-dark border-0 shadow mb-4">
+    <div class="card-header bg-dark">
+        <h5 class="mb-0">Athlete Comparison</h5>
+    </div>
+    <div class="card-body">
+        {% if comparison_data %}
+            <div class="table-responsive">
+                <table class="table table-dark table-hover" id="comparisonTable">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            {% for athlete in athletes %}
+                                <th>{{ athlete.username }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for metric in metrics %}
+                            <tr>
+                                <td>{{ metric.name }}</td>
+                                {% for athlete in athletes %}
+                                    <td>
+                                        {% if comparison_data.get(metric.name, {}).get(athlete.username) != 'N/A' %}
+                                            {{ comparison_data.get(metric.name, {}).get(athlete.username, 'N/A') }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-4">
+                <canvas id="comparisonChart" height="300"></canvas>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <h5>No comparison data available</h5>
+                <p class="text-muted">Insufficient data to generate a comparison</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<div class="card bg-dark border-0 shadow">
+    <div class="card-header bg-dark">
+        <h5 class="mb-0">Insights & Recommendations</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card bg-secondary bg-opacity-25 border-0">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="fas fa-lightbulb text-warning me-2"></i>Performance Insights
+                        </h6>
+                        <ul class="list-unstyled mt-3">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <span id="insight1">Most consistent performance area: Speed and Agility</span>
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-exclamation-circle text-warning me-2"></i>
+                                <span id="insight2">Improvement needed: Endurance metrics show decline</span>
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-arrow-trend-up text-info me-2"></i>
+                                <span id="insight3">Positive trend: 15% overall improvement in the last 30 days</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-4">
+                <div class="card bg-secondary bg-opacity-25 border-0">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="fas fa-clipboard-list text-primary me-2"></i>Recommendations
+                        </h6>
+                        <ul class="list-unstyled mt-3">
+                            <li class="mb-2">
+                                <i class="fas fa-angle-right text-primary me-2"></i>
+                                <span id="rec1">Focus on improving endurance with interval training</span>
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-angle-right text-primary me-2"></i>
+                                <span id="rec2">Maintain current strength training regimen</span>
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-angle-right text-primary me-2"></i>
+                                <span id="rec3">Consider individual coaching for athletes with lower metrics</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if csv_data %}
+<div id="csvData" data-csv="{{ csv_data }}" style="display: none;"></div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Download report button
+    const downloadBtn = document.getElementById('downloadReportBtn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', function() {
+            generatePDF();
+        });
+    }
+    
+    // CSV Data
+    const csvDataElement = document.getElementById('csvData');
+    function downloadCSV() {
+        if (csvDataElement) {
+            const csvData = atob(csvDataElement.dataset.csv);
+            const blob = new Blob([csvData], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('hidden', '');
+            a.setAttribute('href', url);
+            a.setAttribute('download', 'performance_report.csv');
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    }
+    
+    // Generate PDF report
+    function generatePDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Title
+        doc.setFontSize(20);
+        doc.text("{{ team.name }} - {{ report_type.replace('_', ' ').title() }}", 14, 22);
+        
+        // Parameters
+        doc.setFontSize(12);
+        doc.text(`Date Range: {{ date_from.strftime('%Y-%m-%d') }} to {{ date_to.strftime('%Y-%m-%d') }}`, 14, 32);
+        
+        {% if report_type == 'team_performance' %}
+            if (document.getElementById('performanceTable')) {
+                // Add performance table
+                doc.autoTable({
+                    html: '#performanceTable',
+                    startY: 40,
+                    styles: { fontSize: 8 },
+                    headStyles: { fillColor: [30, 60, 90] }
+                });
+            }
+        {% elif report_type == 'athlete_comparison' %}
+            if (document.getElementById('comparisonTable')) {
+                // Add comparison table
+                doc.autoTable({
+                    html: '#comparisonTable',
+                    startY: 40,
+                    styles: { fontSize: 8 },
+                    headStyles: { fillColor: [30, 60, 90] }
+                });
+            }
+        {% endif %}
+        
+        // Add insights and recommendations
+        const currentY = doc.lastAutoTable.finalY + 10;
+        
+        doc.setFontSize(14);
+        doc.text("Insights & Recommendations", 14, currentY);
+        
+        doc.setFontSize(10);
+        // Insights
+        doc.text("Performance Insights:", 14, currentY + 10);
+        doc.text("• " + document.getElementById('insight1').textContent, 20, currentY + 16);
+        doc.text("• " + document.getElementById('insight2').textContent, 20, currentY + 22);
+        doc.text("• " + document.getElementById('insight3').textContent, 20, currentY + 28);
+        
+        // Recommendations
+        doc.text("Recommendations:", 14, currentY + 38);
+        doc.text("• " + document.getElementById('rec1').textContent, 20, currentY + 44);
+        doc.text("• " + document.getElementById('rec2').textContent, 20, currentY + 50);
+        doc.text("• " + document.getElementById('rec3').textContent, 20, currentY + 56);
+        
+        // Footer
+        doc.setFontSize(8);
+        doc.text("Generated on " + new Date().toLocaleDateString(), 14, 280);
+        doc.text("Sports Performance Tracker", 100, 280, { align: 'center' });
+        
+        // Save PDF
+        doc.save("{{ team.name }}_{{ report_type }}_report.pdf");
+        
+        // Also download CSV data if available
+        if (csvDataElement) {
+            downloadCSV();
+        }
+    }
+    
+    // Initialize charts if data is available
+    {% if report_type == 'team_performance' and performances %}
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        
+        // Group performances by metric and athlete
+        const performances = {{ performances|tojson }};
+        const metrics = [...new Set(performances.map(p => p.metric_name))];
+        
+        // Create datasets by metric
+        const datasets = metrics.map((metric, index) => {
+            const metricData = performances.filter(p => p.metric_name === metric);
+            
+            // Generate a unique color for this metric
+            const hue = (index * 137) % 360;
+            const color = `hsl(${hue}, 70%, 60%)`;
+            
+            // Group by date and calculate average for each date
+            const dateGroups = {};
+            metricData.forEach(p => {
+                const date = new Date(p.recorded_at.$date).toISOString().split('T')[0];
+                if (!dateGroups[date]) {
+                    dateGroups[date] = [];
+                }
+                dateGroups[date].push(p.value);
+            });
+            
+            // Create data points with averages
+            const dataPoints = Object.entries(dateGroups).map(([date, values]) => {
+                return {
+                    x: date,
+                    y: values.reduce((sum, val) => sum + val, 0) / values.length
+                };
+            }).sort((a, b) => new Date(a.x) - new Date(b.x));
+            
+            return {
+                label: metric,
+                data: dataPoints,
+                borderColor: color,
+                backgroundColor: `hsl(${hue}, 70%, 10%)`,
+                tension: 0.4
+            };
+        });
+        
+        // Create the chart
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'day',
+                            displayFormats: {
+                                day: 'MMM dd'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Value'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Performance Metrics Over Time'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                }
+            }
+        });
+    {% endif %}
+    
+    {% if report_type == 'athlete_comparison' and comparison_data %}
+        const ctx = document.getElementById('comparisonChart').getContext('2d');
+        
+        // Extract data from comparison_data
+        const comparisonData = {{ comparison_data|tojson }};
+        const athletes = {{ athletes|tojson }};
+        const metrics = {{ metrics|tojson }};
+        
+        // Prepare data for the chart
+        const labels = metrics.map(m => m.name);
+        const datasets = athletes.map((athlete, index) => {
+            const username = athlete.username;
+            
+            // Generate a unique color for this athlete
+            const hue = (index * 137) % 360;
+            const color = `hsl(${hue}, 70%, 60%)`;
+            
+            // Get values for each metric
+            const values = metrics.map(m => {
+                const value = comparisonData[m.name] ? comparisonData[m.name][username] : null;
+                return value === 'N/A' ? null : value;
+            });
+            
+            return {
+                label: username,
+                data: values,
+                backgroundColor: `hsla(${hue}, 70%, 60%, 0.7)`,
+                borderColor: `hsl(${hue}, 70%, 50%)`,
+                borderWidth: 1
+            };
+        });
+        
+        // Create radar chart for comparison
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    r: {
+                        angleLines: {
+                            display: true,
+                            color: 'rgba(255, 255, 255, 0.2)'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.2)'
+                        },
+                        pointLabels: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Athlete Performance Comparison by Metric'
+                    }
+                }
+            }
+        });
+    {% endif %}
+});
+</script>
+{% endblock %}

@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %} - Manage Teams{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <h1 class="display-5"><i class="fas fa-users me-2"></i>Manage Teams</h1>
+        <p class="lead text-muted">Create and manage your sports teams</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Create New Team</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('coach.manage_teams') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Team Name</label>
+                        {{ form.name(class="form-control", placeholder="Enter team name") }}
+                        {% if form.name.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.name.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="sport" class="form-label">Sport</label>
+                        {{ form.sport(class="form-control", placeholder="Enter sport type") }}
+                        {% if form.sport.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.sport.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description (Optional)</label>
+                        {{ form.description(class="form-control", rows="3", placeholder="Brief description about the team") }}
+                        {% if form.description.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.description.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Your Teams</h5>
+                <input type="text" id="teamSearch" class="form-control form-control-sm w-auto" placeholder="Search teams...">
+            </div>
+            <div class="card-body p-0">
+                {% if teams %}
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Team Name</th>
+                                    <th>Sport</th>
+                                    <th>Athletes</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for team in teams %}
+                                <tr class="team-row">
+                                    <td>{{ team.name }}</td>
+                                    <td>{{ team.sport }}</td>
+                                    <td>
+                                        <span class="badge bg-primary rounded-pill">
+                                            {{ team.athletes|length }} Athletes
+                                        </span>
+                                    </td>
+                                    <td>{{ team.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('coach.team_detail', team_id=team._id) }}" class="btn btn-outline-light">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{{ url_for('coach.manage_metrics', team_id=team._id) }}" class="btn btn-outline-info">
+                                                <i class="fas fa-chart-bar"></i>
+                                            </a>
+                                            <a href="{{ url_for('coach.add_athlete', team_id=team._id) }}" class="btn btn-outline-success">
+                                                <i class="fas fa-user-plus"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <div class="mb-3">
+                            <i class="fas fa-users fa-4x text-muted"></i>
+                        </div>
+                        <h5>No teams yet</h5>
+                        <p class="text-muted">Create your first team using the form</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Team search functionality
+    const searchInput = document.getElementById('teamSearch');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+            const searchValue = this.value.toLowerCase();
+            const teamRows = document.querySelectorAll('.team-row');
+            
+            teamRows.forEach(row => {
+                const teamName = row.cells[0].textContent.toLowerCase();
+                const sportName = row.cells[1].textContent.toLowerCase();
+                
+                if (teamName.includes(searchValue) || sportName.includes(searchValue)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

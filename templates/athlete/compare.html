@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+
+{% block title %} - Compare Performance{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('athlete.dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('athlete.team_stats', team_id=team._id) }}">{{ team.name }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Compare</li>
+            </ol>
+        </nav>
+        <h1 class="display-5">
+            <i class="fas fa-chart-bar me-2"></i>{{ metric.name }} Comparison
+        </h1>
+        <p class="lead text-muted">Compare your performance with teammates</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('athlete.performance_history', team_id=team._id, metric_name=metric.name) }}" class="btn btn-info">
+            <i class="fas fa-history me-2"></i>View My History
+        </a>
+    </div>
+</div>
+
+<div class="card bg-dark border-0 shadow mb-4">
+    <div class="card-header bg-dark">
+        <h5 class="mb-0">{{ metric.name }} Performance Comparison</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Chart view -->
+                <canvas id="comparisonChart" height="300"></canvas>
+            </div>
+            <div class="col-lg-4">
+                <!-- Metric information -->
+                <div class="card bg-secondary bg-opacity-25 border-0 mb-4">
+                    <div class="card-body">
+                        <h6 class="card-title border-bottom pb-2 mb-3">About this Metric</h6>
+                        <p><strong>Name:</strong> {{ metric.name }}</p>
+                        <p><strong>Unit:</strong> {{ metric.unit }}</p>
+                        <p><strong>Range:</strong> {{ metric.min_value }} - {{ metric.max_value }}</p>
+                        {% if metric.description %}
+                            <p><strong>Description:</strong> {{ metric.description }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Your stats -->
+                <div class="card bg-secondary bg-opacity-25 border-0">
+                    <div class="card-body">
+                        <h6 class="card-title border-bottom pb-2 mb-3">Your Stats</h6>
+                        {% set your_data = None %}
+                        {% for item in comparison_data %}
+                            {% if item.is_current_user %}
+                                {% set your_data = item %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if your_data %}
+                            <p><strong>Current Value:</strong> {{ your_data.value }}</p>
+                            <p><strong>Last Updated:</strong> {{ your_data.date.strftime('%Y-%m-%d') }}</p>
+                            
+                            <!-- Position in team -->
+                            {% set position = 1 %}
+                            {% for item in comparison_data %}
+                                {% if item.value > your_data.value %}
+                                    {% set position = position + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                            
+                            <p><strong>Position in Team:</strong> {{ position }} of {{ comparison_data|length }}</p>
+                            
+                            <!-- Calculate percentage from top -->
+                            {% if comparison_data|length > 0 %}
+                                {% set top_value = comparison_data[0].value %}
+                                {% set percentage_from_top = ((your_data.value - top_value) / top_value * 100)|round(1) if top_value != 0 else 0 %}
+                                <p>
+                                    <strong>From Top Performer:</strong> 
+                                    <span class="{% if percentage_from_top >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                        {{ percentage_from_top }}%
+                                    </span>
+                                </p>
+                            {% endif %}
+                        {% else %}
+                            <div class="text-center py-3">
+                                <i class="fas fa-exclamation-circle text-warning mb-2"></i>
+                                <p>No performance data available for you</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <hr class="my-4">
+        
+        <!-- Leaderboard -->
+        <h5 class="mb-3">Team Leaderboard</h5>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Athlete</th>
+                        <th>Value</th>
+                        <th>Last Recorded</th>
+                        <th>Trend</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in comparison_data %}
+                        <tr {% if item.is_current_user %}class="table-primary"{% endif %}>
+                            <td>{{ loop.index }}</td>
+                            <td>
+                                {{ item.athlete }}
+                                {% if item.is_current_user %}
+                                    <span class="badge bg-info">You</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.value }}</td>
+                            <td>{{ item.date.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <!-- In a real app, this would be calculated from historical data -->
+                                {% set random = loop.index0 % 3 %}
+                                {% if random == 0 %}
+                                    <i class="fas fa-arrow-up text-success"></i>
+                                {% elif random == 1 %}
+                                    <i class="fas fa-arrow-right text-warning"></i>
+                                {% else %}
+                                    <i class="fas fa-arrow-down text-danger"></i>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Create comparison chart
+    const comparisonData = {{ comparison_data|tojson }};
+    
+    if (comparisonData.length > 0) {
+        const ctx = document.getElementById('comparisonChart').getContext('2d');
+        
+        // Prepare data
+        const labels = comparisonData.map(item => item.athlete);
+        const data = comparisonData.map(item => item.value);
+        const backgroundColor = comparisonData.map(item => 
+            item.is_current_user ? 'rgba(75, 192, 192, 0.7)' : 'rgba(54, 162, 235, 0.4)'
+        );
+        const borderColor = comparisonData.map(item => 
+            item.is_current_user ? 'rgba(75, 192, 192, 1)' : 'rgba(54, 162, 235, 1)'
+        );
+        
+        // Create chart
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '{{ metric.name }} ({{ metric.unit }})',
+                    data: data,
+                    backgroundColor: backgroundColor,
+                    borderColor: borderColor,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.raw;
+                                const index = context.dataIndex;
+                                const athlete = comparisonData[index].athlete;
+                                return `${athlete}: ${value} {{ metric.unit }}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: {{ 'true' if metric.min_value <= 0 else 'false' }},
+                        title: {
+                            display: true,
+                            text: '{{ metric.name }} ({{ metric.unit }})'
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+
+{% block title %} - Manage Metrics{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('coach.dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('coach.manage_teams') }}">Teams</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('coach.team_detail', team_id=team._id) }}">{{ team.name }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Metrics</li>
+            </ol>
+        </nav>
+        <h1 class="display-5"><i class="fas fa-chart-bar me-2"></i>Manage Metrics</h1>
+        <p class="lead text-muted">Customize performance metrics for {{ team.name }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Add New Metric</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('coach.manage_metrics', team_id=team._id) }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Metric Name</label>
+                        {{ form.name(class="form-control", placeholder="e.g., Speed, Strength, Accuracy") }}
+                        {% if form.name.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.name.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        {{ form.description(class="form-control", rows="2", placeholder="Brief description of what this metric measures") }}
+                        {% if form.description.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.description.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="unit" class="form-label">Unit</label>
+                        {{ form.unit(class="form-control", placeholder="e.g., seconds, kg, points") }}
+                        {% if form.unit.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.unit.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col">
+                            <label for="min_value" class="form-label">Min Value</label>
+                            {{ form.min_value(class="form-control", placeholder="0") }}
+                            {% if form.min_value.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.min_value.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col">
+                            <label for="max_value" class="form-label">Max Value</label>
+                            {{ form.max_value(class="form-control", placeholder="100") }}
+                            {% if form.max_value.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.max_value.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Current Metrics</h5>
+            </div>
+            <div class="card-body">
+                {% if metrics %}
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Metric Name</th>
+                                    <th>Description</th>
+                                    <th>Unit</th>
+                                    <th>Range</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for metric in metrics %}
+                                <tr>
+                                    <td>{{ metric.name }}</td>
+                                    <td>{{ metric.description or 'N/A' }}</td>
+                                    <td>{{ metric.unit }}</td>
+                                    <td>{{ metric.min_value }} - {{ metric.max_value }}</td>
+                                    <td>
+                                        <a href="{{ url_for('coach.performance_data', team_id=team._id, metric_name=metric.name) }}" class="btn btn-sm btn-outline-info">
+                                            <i class="fas fa-chart-line"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <div class="mb-3">
+                            <i class="fas fa-chart-bar fa-4x text-muted"></i>
+                        </div>
+                        <h5>No metrics defined yet</h5>
+                        <p class="text-muted">Start by adding custom performance metrics for your team</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if metrics %}
+        <div class="mt-4">
+            <div class="card bg-dark border-0 shadow">
+                <div class="card-header bg-dark">
+                    <h5 class="mb-0">Metric Visualization</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <select id="metricSelect" class="form-select">
+                            {% for metric in metrics %}
+                                <option value="{{ metric.name }}">{{ metric.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <canvas id="metricChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if metrics %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const metricSelect = document.getElementById('metricSelect');
+    let metricChart = null;
+    
+    const loadMetricData = (metricName) => {
+        fetch(`/coach/api/performance_data/{{ team._id }}/${metricName}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length === 0) {
+                    const ctx = document.getElementById('metricChart');
+                    ctx.style.display = 'none';
+                    return;
+                }
+                
+                // Group data by athlete
+                const athletes = [...new Set(data.map(item => item.athlete))];
+                const dates = [...new Set(data.map(item => item.date))].sort();
+                
+                const datasets = athletes.map(athlete => {
+                    // Get a random color
+                    const r = Math.floor(Math.random() * 150) + 50;
+                    const g = Math.floor(Math.random() * 150) + 50;
+                    const b = Math.floor(Math.random() * 150) + 50;
+                    
+                    const athleteData = data.filter(item => item.athlete === athlete);
+                    
+                    // Map values to dates
+                    const values = dates.map(date => {
+                        const match = athleteData.find(item => item.date === date);
+                        return match ? match.value : null;
+                    });
+                    
+                    return {
+                        label: athlete,
+                        data: values,
+                        borderColor: `rgb(${r}, ${g}, ${b})`,
+                        backgroundColor: `rgba(${r}, ${g}, ${b}, 0.1)`,
+                        tension: 0.4
+                    };
+                });
+                
+                // Create or update chart
+                const ctx = document.getElementById('metricChart').getContext('2d');
+                ctx.canvas.style.display = 'block';
+                
+                if (metricChart) {
+                    metricChart.destroy();
+                }
+                
+                metricChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: dates,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            },
+                            title: {
+                                display: true,
+                                text: `${metricName} Performance`
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Value'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Date'
+                                }
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error('Error loading metric data:', error));
+    };
+    
+    // Initial load
+    if (metricSelect && metricSelect.value) {
+        loadMetricData(metricSelect.value);
+    }
+    
+    // Update when metric changes
+    if (metricSelect) {
+        metricSelect.addEventListener('change', function() {
+            loadMetricData(this.value);
+        });
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

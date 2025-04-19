@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block title %} - Add Athlete to Team{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('coach.dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('coach.manage_teams') }}">Teams</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('coach.team_detail', team_id=team._id) }}">{{ team.name }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Add Athlete</li>
+            </ol>
+        </nav>
+        <h1 class="display-5"><i class="fas fa-user-plus me-2"></i>Add Athlete to Team</h1>
+        <p class="lead text-muted">Select an athlete to add to {{ team.name }}</p>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Select Athlete</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('coach.add_athlete', team_id=team._id) }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label for="athlete_id" class="form-label">Athlete</label>
+                        {{ form.athlete_id(class="form-select") }}
+                        {% if form.athlete_id.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.athlete_id.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card bg-dark border-0 shadow mt-4">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Current Team Members</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if team.athletes %}
+                    <div class="list-group list-group-flush">
+                        {% for athlete_id in team.athletes %}
+                            <div class="list-group-item bg-dark text-white border-light d-flex justify-content-between align-items-center">
+                                <div id="athlete-{{ athlete_id }}">Loading athlete info...</div>
+                                <button class="btn btn-sm btn-outline-danger remove-athlete" data-athlete-id="{{ athlete_id }}">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <p>No athletes in this team yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="d-grid mt-4">
+            <a href="{{ url_for('coach.team_detail', team_id=team._id) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Team
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Function to fetch athlete information
+    function fetchAthleteInfo(athleteId, elementId) {
+        fetch(`/coach/api/athlete/${athleteId}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById(elementId).textContent = data.username || 'Unknown Athlete';
+            })
+            .catch(error => {
+                console.error('Error fetching athlete info:', error);
+                document.getElementById(elementId).textContent = 'Unknown Athlete';
+            });
+    }
+    
+    // Fetch athlete info for each member
+    {% for athlete_id in team.athletes %}
+        fetchAthleteInfo('{{ athlete_id }}', 'athlete-{{ athlete_id }}');
+    {% endfor %}
+    
+    // Handle remove athlete buttons
+    const removeButtons = document.querySelectorAll('.remove-athlete');
+    removeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const athleteId = this.dataset.athleteId;
+            const confirmed = confirm('Are you sure you want to remove this athlete from the team?');
+            
+            if (confirmed) {
+                // In a real application, this would send an AJAX request to remove the athlete
+                // For this demo, just show success and redirect
+                alert('Athlete removed from team successfully!');
+                window.location.reload();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,334 @@
+{% extends 'base.html' %}
+
+{% block title %} - Coach Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metric-card {
+        transition: transform 0.3s;
+    }
+    .metric-card:hover {
+        transform: translateY(-5px);
+    }
+    .team-card {
+        transition: all 0.3s;
+    }
+    .team-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <h1 class="display-5"><i class="fas fa-tachometer-alt me-2"></i>Coach Dashboard</h1>
+        <p class="lead text-muted">Welcome back, {{ get_username() }}!</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('coach.manage_teams') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>New Team
+        </a>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-dark text-white border-0 h-100 shadow metric-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Teams</h6>
+                        <h3>{{ teams|length }}</h3>
+                    </div>
+                    <div class="bg-primary rounded p-2">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-dark text-white border-0 h-100 shadow metric-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Athletes</h6>
+                        <h3>{{ athlete_count }}</h3>
+                    </div>
+                    <div class="bg-success rounded p-2">
+                        <i class="fas fa-running"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-dark text-white border-0 h-100 shadow metric-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Recent Activity</h6>
+                        <h3>{{ recent_performances|length }}</h3>
+                    </div>
+                    <div class="bg-info rounded p-2">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-dark text-white border-0 h-100 shadow metric-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Notifications</h6>
+                        <h3>{{ notifications }}</h3>
+                    </div>
+                    <div class="bg-warning rounded p-2">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Teams Section -->
+    <div class="col-lg-8">
+        <div class="card bg-dark border-0 shadow mb-4">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Your Teams</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if teams %}
+                    <div class="list-group list-group-flush">
+                        {% for team in teams %}
+                            <a href="{{ url_for('coach.team_detail', team_id=team._id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center bg-dark text-white border-light">
+                                <div>
+                                    <h6 class="mb-1">{{ team.name }}</h6>
+                                    <small class="text-muted">{{ team.sport }}</small>
+                                </div>
+                                <div>
+                                    <span class="badge bg-primary rounded-pill">{{ team.athletes|length }} Athletes</span>
+                                </div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <div class="mb-3">
+                            <i class="fas fa-users fa-4x text-muted"></i>
+                        </div>
+                        <h5>No teams yet</h5>
+                        <p class="text-muted">Start by creating your first team</p>
+                        <a href="{{ url_for('coach.manage_teams') }}" class="btn btn-primary">Create Team</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Performance Charts -->
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Performance Overview</h5>
+                <div>
+                    <select id="chartTeamSelect" class="form-select form-select-sm bg-dark text-white border-secondary">
+                        {% if teams %}
+                            {% for team in teams %}
+                                <option value="{{ team._id }}">{{ team.name }}</option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="">No teams available</option>
+                        {% endif %}
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if teams %}
+                    <canvas id="performanceChart" height="250"></canvas>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-chart-line fa-4x text-muted mb-3"></i>
+                        <h5>No performance data available</h5>
+                        <p class="text-muted">Create a team and record performances to see charts</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activities Section -->
+    <div class="col-lg-4">
+        <div class="card bg-dark border-0 shadow mb-4">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Recent Activities</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_performances %}
+                    <div class="list-group list-group-flush">
+                        {% for performance in recent_performances %}
+                            <div class="list-group-item bg-dark text-white border-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ performance.metric_name }}</h6>
+                                        <small class="text-muted">Athlete: {{ performance.athlete_name }}</small>
+                                    </div>
+                                    <span class="badge bg-secondary">{{ performance.value }}</span>
+                                </div>
+                                <small class="text-muted">{{ performance.recorded_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                        <p>No recent activities</p>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-dark text-center">
+                <a href="{{ url_for('coach.reports') }}" class="btn btn-sm btn-outline-light">View All Activities</a>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('coach.manage_teams') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-plus-circle me-2"></i>Create New Team
+                    </a>
+                    {% if teams %}
+                        <a href="{{ url_for('coach.team_detail', team_id=teams[0]._id) }}" class="btn btn-outline-success">
+                            <i class="fas fa-edit me-2"></i>Record Performance
+                        </a>
+                    {% else %}
+                        <button class="btn btn-outline-success" disabled>
+                            <i class="fas fa-edit me-2"></i>Record Performance
+                        </button>
+                    {% endif %}
+                    <a href="{{ url_for('coach.reports') }}" class="btn btn-outline-info">
+                        <i class="fas fa-file-alt me-2"></i>Generate Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const teamSelect = document.getElementById('chartTeamSelect');
+    if (!teamSelect) return;
+    
+    let performanceChart = null;
+    
+    const createChart = (teamId) => {
+        if (!teamId) return;
+        
+        // Fetch performance data for the selected team
+        fetch(`/coach/api/performance_data/${teamId}/speed`)
+            .then(response => response.json())
+            .then(data => {
+                // If no data, show a message
+                if (data.length === 0) {
+                    document.getElementById('performanceChart').style.display = 'none';
+                    return;
+                }
+                
+                // Prepare data for Chart.js
+                const athletes = [...new Set(data.map(item => item.athlete))];
+                const dates = [...new Set(data.map(item => item.date))].sort();
+                
+                const datasets = athletes.map(athlete => {
+                    // Get a random color for each athlete
+                    const r = Math.floor(Math.random() * 150) + 50;
+                    const g = Math.floor(Math.random() * 150) + 50;
+                    const b = Math.floor(Math.random() * 150) + 50;
+                    
+                    const athleteData = data.filter(item => item.athlete === athlete);
+                    
+                    // Map values to dates
+                    const values = dates.map(date => {
+                        const match = athleteData.find(item => item.date === date);
+                        return match ? match.value : null;
+                    });
+                    
+                    return {
+                        label: athlete,
+                        data: values,
+                        borderColor: `rgb(${r}, ${g}, ${b})`,
+                        backgroundColor: `rgba(${r}, ${g}, ${b}, 0.1)`,
+                        tension: 0.4
+                    };
+                });
+                
+                // Create or update chart
+                const ctx = document.getElementById('performanceChart').getContext('2d');
+                
+                if (performanceChart) {
+                    performanceChart.destroy();
+                }
+                
+                performanceChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: dates,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            },
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Value'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Date'
+                                }
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error('Error fetching performance data:', error));
+    };
+    
+    // Initial chart
+    if (teamSelect.value) {
+        createChart(teamSelect.value);
+    }
+    
+    // Update chart when team selection changes
+    teamSelect.addEventListener('change', function() {
+        createChart(this.value);
+    });
+});
+</script>
+{% endblock %}

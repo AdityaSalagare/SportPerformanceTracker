@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+
+{% block title %} - Home{% endblock %}
+
+{% block content %}
+<div class="row align-items-center py-5">
+    <div class="col-lg-6">
+        <h1 class="display-4 fw-bold">Elevate Your Sports Performance</h1>
+        <p class="lead my-4">A comprehensive platform for coaches and athletes to track, analyze, and improve performance metrics across any sport.</p>
+        <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+            {% if not session.get('user_id') %}
+                <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg px-4 me-md-2">Login</a>
+                <a href="{{ url_for('auth.register') }}" class="btn btn-outline-light btn-lg px-4">Register</a>
+            {% else %}
+                {% if is_coach() %}
+                    <a href="{{ url_for('coach.dashboard') }}" class="btn btn-primary btn-lg px-4 me-md-2">Go to Dashboard</a>
+                {% elif is_athlete() %}
+                    <a href="{{ url_for('athlete.dashboard') }}" class="btn btn-primary btn-lg px-4 me-md-2">Go to Dashboard</a>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card bg-dark text-white shadow-lg">
+            <div class="card-body p-5">
+                <svg class="text-primary mb-3" width="100%" height="300" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:rgb(13,110,253);stop-opacity:0.7" />
+                            <stop offset="100%" style="stop-color:rgb(105,0,255);stop-opacity:0.7" />
+                        </linearGradient>
+                    </defs>
+                    
+                    <!-- Mock line chart -->
+                    <polyline points="0,280 50,200 100,220 150,100 200,150 250,90 300,70 350,120 400,50 450,80 500,30" 
+                              style="fill:none;stroke:url(#grad);stroke-width:4" />
+                              
+                    <!-- Circle points -->
+                    <circle cx="0" cy="280" r="5" fill="#0d6efd" />
+                    <circle cx="50" cy="200" r="5" fill="#0d6efd" />
+                    <circle cx="100" cy="220" r="5" fill="#0d6efd" />
+                    <circle cx="150" cy="100" r="5" fill="#0d6efd" />
+                    <circle cx="200" cy="150" r="5" fill="#0d6efd" />
+                    <circle cx="250" cy="90" r="5" fill="#0d6efd" />
+                    <circle cx="300" cy="70" r="5" fill="#0d6efd" />
+                    <circle cx="350" cy="120" r="5" fill="#0d6efd" />
+                    <circle cx="400" cy="50" r="5" fill="#0d6efd" />
+                    <circle cx="450" cy="80" r="5" fill="#0d6efd" />
+                    <circle cx="500" cy="30" r="5" fill="#0d6efd" />
+                </svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr class="my-5">
+
+<div class="row g-4 py-5">
+    <div class="col-12">
+        <h2 class="text-center mb-4">Why Choose Our Platform?</h2>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100 bg-dark text-white border-0 shadow">
+            <div class="card-body p-4 text-center">
+                <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
+                <h3 class="card-title h5">Customizable Metrics</h3>
+                <p class="card-text">Create and track custom performance metrics tailored to your specific sport and training goals.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100 bg-dark text-white border-0 shadow">
+            <div class="card-body p-4 text-center">
+                <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                <h3 class="card-title h5">Team Management</h3>
+                <p class="card-text">Coaches can manage multiple teams with individual athlete tracking and comparative analysis.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100 bg-dark text-white border-0 shadow">
+            <div class="card-body p-4 text-center">
+                <i class="fas fa-file-alt fa-3x text-primary mb-3"></i>
+                <h3 class="card-title h5">Detailed Reports</h3>
+                <p class="card-text">Generate comprehensive reports with visual analytics for data-driven coaching decisions.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr class="my-5">
+
+<div class="row align-items-center py-5">
+    <div class="col-md-6 order-md-2">
+        <h2>For Coaches</h2>
+        <p class="lead">Take your coaching to the next level with advanced analytics and team management tools.</p>
+        <ul class="list-unstyled">
+            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Manage multiple teams and athletes</li>
+            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Create custom performance metrics</li>
+            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Track progress over time with visual analytics</li>
+            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Generate detailed performance reports</li>
+            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Receive alerts for milestone achievements</li>
+        </ul>
+    </div>
+    <div class="col-md-6 order-md-1">
+        <div class="card bg-dark text-white shadow">
+            <div class="card-body p-4">
+                <svg width="100%" height="300" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Dashboard UI mockup -->
+                    <rect x="10" y="10" width="480" height="280" rx="5" fill="#212529" stroke="#343a40" stroke-width="2"/>
+                    
+                    <!-- Header bar -->
+                    <rect x="10" y="10" width="480" height="40" rx="5" fill="#343a40"/>
+                    <text x="30" y="35" fill="#ffffff" font-family="Arial" font-size="14">Coach Dashboard</text>
+                    
+                    <!-- Side nav -->
+                    <rect x="10" y="50" width="120" height="240" fill="#212529" stroke="#343a40" stroke-width="1"/>
+                    <text x="25" y="80" fill="#6c757d" font-family="Arial" font-size="12">Teams</text>
+                    <text x="25" y="110" fill="#ffffff" font-family="Arial" font-size="12">Athletes</text>
+                    <text x="25" y="140" fill="#6c757d" font-family="Arial" font-size="12">Metrics</text>
+                    <text x="25" y="170" fill="#6c757d" font-family="Arial" font-size="12">Reports</text>
+                    
+                    <!-- Main content -->
+                    <rect x="140" y="50" width="350" height="110" rx="3" fill="#343a40"/>
+                    <text x="155" y="75" fill="#ffffff" font-family="Arial" font-size="14">Team Performance</text>
+                    
+                    <!-- Chart mockup -->
+                    <polyline points="155,130 185,110 215,120 245,90 275,100 305,80 335,70 365,85 395,60 425,65 455,40" 
+                              style="fill:none;stroke:#0d6efd;stroke-width:2" />
+                              
+                    <!-- Athlete cards -->
+                    <rect x="140" y="170" width="110" height="120" rx="3" fill="#343a40"/>
+                    <circle cx="195" cy="205" r="20" fill="#6c757d"/>
+                    <text x="175" y="245" fill="#ffffff" font-family="Arial" font-size="12" text-anchor="middle">Athlete 1</text>
+                    <text x="175" y="265" fill="#0d6efd" font-family="Arial" font-size="12" text-anchor="middle">95 pts</text>
+                    
+                    <rect x="260" y="170" width="110" height="120" rx="3" fill="#343a40"/>
+                    <circle cx="315" cy="205" r="20" fill="#6c757d"/>
+                    <text x="295" y="245" fill="#ffffff" font-family="Arial" font-size="12" text-anchor="middle">Athlete 2</text>
+                    <text x="295" y="265" fill="#0d6efd" font-family="Arial" font-size="12" text-anchor="middle">87 pts</text>
+                    
+                    <rect x="380" y="170" width="110" height="120" rx="3" fill="#343a40"/>
+                    <circle cx="435" cy="205" r="20" fill="#6c757d"/>
+                    <text x="415" y="245" fill="#ffffff" font-family="Arial" font-size="12" text-anchor="middle">Athlete 3</text>
+                    <text x="415" y="265" fill="#0d6efd" font-family="Arial" font-size="12" text-anchor="middle">92 pts</text>
+                </svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row align-items-center py-5">
+    <div class="col-md-6">
+        <h2>For Athletes</h2>
+        <p class="lead">Track your progress, compare with teammates, and identify areas for improvement.</p>
+        <ul class="list-unstyled">
+            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Monitor your performance metrics</li>
+            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> View historical progress data</li>
+            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Compare with teammates</li>
+            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Set personal goals and track achievements</li>
+            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Receive notifications about performance milestones</li>
+        </ul>
+    </div>
+    <div class="col-md-6">
+        <div class="card bg-dark text-white shadow">
+            <div class="card-body p-4">
+                <svg width="100%" height="300" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Athlete UI mockup -->
+                    <rect x="10" y="10" width="480" height="280" rx="5" fill="#212529" stroke="#343a40" stroke-width="2"/>
+                    
+                    <!-- Header bar -->
+                    <rect x="10" y="10" width="480" height="40" rx="5" fill="#343a40"/>
+                    <text x="30" y="35" fill="#ffffff" font-family="Arial" font-size="14">Athlete Dashboard</text>
+                    
+                    <!-- Profile section -->
+                    <rect x="30" y="70" width="440" height="80" rx="3" fill="#343a40"/>
+                    <circle cx="70" cy="110" r="25" fill="#6c757d"/>
+                    <text x="130" y="95" fill="#ffffff" font-family="Arial" font-size="16">John Doe</text>
+                    <text x="130" y="120" fill="#6c757d" font-family="Arial" font-size="14">Team: Premier Squad</text>
+                    
+                    <!-- Performance graph -->
+                    <rect x="30" y="160" width="440" height="110" rx="3" fill="#343a40"/>
+                    <text x="45" y="185" fill="#ffffff" font-family="Arial" font-size="14">My Performance Trend</text>
+                    
+                    <!-- Chart mockup -->
+                    <polyline points="45,240 85,220 125,230 165,200 205,210 245,180 285,190 325,170 365,160 405,170 445,150" 
+                              style="fill:none;stroke:#0d6efd;stroke-width:2" />
+                              
+                    <!-- Comparison line -->
+                    <polyline points="45,250 85,240 125,245 165,230 205,235 245,220 285,225 325,215 365,210 405,215 445,205" 
+                              style="fill:none;stroke:#6c757d;stroke-width:2;stroke-dasharray:5,5" />
+                              
+                    <text x="45" y="270" fill="#0d6efd" font-family="Arial" font-size="10">You</text>
+                    <text x="85" y="270" fill="#6c757d" font-family="Arial" font-size="10">Team Average</text>
+                </svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="py-5 text-center">
+    <h2 class="mb-4">Ready to transform your coaching and athletic performance?</h2>
+    {% if not session.get('user_id') %}
+        <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg px-5">Get Started Today</a>
+    {% else %}
+        {% if is_coach() %}
+            <a href="{{ url_for('coach.dashboard') }}" class="btn btn-primary btn-lg px-5">Go to Dashboard</a>
+        {% elif is_athlete() %}
+            <a href="{{ url_for('athlete.dashboard') }}" class="btn btn-primary btn-lg px-5">Go to Dashboard</a>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

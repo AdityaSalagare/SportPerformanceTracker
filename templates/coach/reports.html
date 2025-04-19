@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+
+{% block title %} - Reports{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('coach.dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Reports</li>
+            </ol>
+        </nav>
+        <h1 class="display-5"><i class="fas fa-file-alt me-2"></i>Performance Reports</h1>
+        <p class="lead text-muted">Generate detailed performance reports and analytics</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Generate Report</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('coach.reports') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label for="team_id" class="form-label">Team</label>
+                        {{ form.team_id(class="form-select") }}
+                        {% if form.team_id.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.team_id.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="report_type" class="form-label">Report Type</label>
+                        {{ form.report_type(class="form-select") }}
+                        {% if form.report_type.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.report_type.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="date_from" class="form-label">From Date</label>
+                        {{ form.date_from(class="form-control", type="date") }}
+                        {% if form.date_from.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.date_from.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="date_to" class="form-label">To Date</label>
+                        {{ form.date_to(class="form-control", type="date") }}
+                        {% if form.date_to.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.date_to.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card bg-dark border-0 shadow mt-4">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Report Types</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item bg-dark text-white border-light">
+                        <h6 class="mb-1">Team Performance</h6>
+                        <p class="mb-0 small text-muted">Comprehensive overview of all performances recorded for a team within a specific date range.</p>
+                    </div>
+                    <div class="list-group-item bg-dark text-white border-light">
+                        <h6 class="mb-1">Athlete Comparison</h6>
+                        <p class="mb-0 small text-muted">Side-by-side comparison of athletes' performance across all metrics in the selected team.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Report Preview</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center py-5" id="reportPreview">
+                    <div class="mb-3">
+                        <i class="fas fa-file-alt fa-4x text-muted"></i>
+                    </div>
+                    <h5>Select options and generate a report</h5>
+                    <p class="text-muted">Your report will appear here after generation</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card bg-dark border-0 shadow mt-4">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Recent Reports</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="recentReports">
+                    <!-- This would typically be populated from the database -->
+                    <div class="list-group-item bg-dark text-white border-light d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">No recent reports</h6>
+                            <p class="mb-0 small text-muted">Generate a report to see it here</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/reports.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Display description for the selected report type
+    const reportTypeSelect = document.getElementById('report_type');
+    if (reportTypeSelect) {
+        reportTypeSelect.addEventListener('change', function() {
+            const selectedValue = this.value;
+            const descriptions = {
+                'team_performance': 'Comprehensive overview of all performances recorded for a team within a specific date range.',
+                'athlete_comparison': 'Side-by-side comparison of athletes\' performance across all metrics in the selected team.'
+            };
+            
+            // Update the preview with a description
+            const preview = document.getElementById('reportPreview');
+            if (preview && descriptions[selectedValue]) {
+                preview.innerHTML = `
+                    <div class="mb-3">
+                        <i class="fas fa-file-chart-column fa-4x text-primary"></i>
+                    </div>
+                    <h5>${selectedValue.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</h5>
+                    <p>${descriptions[selectedValue]}</p>
+                `;
+            }
+        });
+    }
+    
+    // Set default dates if not provided
+    const dateFromInput = document.getElementById('date_from');
+    const dateToInput = document.getElementById('date_to');
+    
+    if (dateFromInput && !dateFromInput.value) {
+        // Set default date from (30 days ago)
+        const dateFrom = new Date();
+        dateFrom.setDate(dateFrom.getDate() - 30);
+        dateFromInput.value = dateFrom.toISOString().split('T')[0];
+    }
+    
+    if (dateToInput && !dateToInput.value) {
+        // Set default date to (today)
+        const dateTo = new Date();
+        dateToInput.value = dateTo.toISOString().split('T')[0];
+    }
+});
+</script>
+{% endblock %}

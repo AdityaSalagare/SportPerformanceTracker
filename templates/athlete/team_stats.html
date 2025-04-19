@@ -1,0 +1,396 @@
+{% extends 'base.html' %}
+
+{% block title %} - Team Stats{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('athlete.dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ team.name }}</li>
+            </ol>
+        </nav>
+        <h1 class="display-5">
+            <i class="fas fa-users me-2"></i>{{ team.name }}
+        </h1>
+        <p class="lead text-muted">{{ team.sport }} Team Statistics</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Team Information -->
+    <div class="col-lg-4 mb-4">
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Team Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Sport:</strong> {{ team.sport }}</p>
+                <p><strong>Members:</strong> {{ teammates|length }} athletes</p>
+                <p><strong>Metrics:</strong> {{ metrics|length }}</p>
+                
+                {% if team.description %}
+                    <p><strong>Description:</strong> {{ team.description }}</p>
+                {% endif %}
+                
+                <hr>
+                
+                <h6 class="mb-3">Available Metrics</h6>
+                <div class="row row-cols-1 row-cols-md-2 g-2">
+                    {% for metric in metrics %}
+                        <div class="col">
+                            <div class="card bg-secondary bg-opacity-25 border-0">
+                                <div class="card-body p-2">
+                                    <h6 class="card-title mb-1">{{ metric.name }}</h6>
+                                    <small class="text-muted">{{ metric.unit }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Team Members -->
+    <div class="col-lg-8 mb-4">
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Team Members</h5>
+            </div>
+            <div class="card-body">
+                {% if teammates %}
+                    <div class="row row-cols-1 row-cols-md-3 g-4">
+                        {% for teammate in teammates %}
+                            <div class="col">
+                                <div class="card h-100 bg-secondary bg-opacity-25 border-0">
+                                    <div class="card-body text-center">
+                                        <div class="mb-3">
+                                            <i class="fas fa-user-circle fa-4x text-primary"></i>
+                                        </div>
+                                        <h5 class="card-title">{{ teammate.username }}</h5>
+                                        <p class="card-text text-muted small">
+                                            {% if teammate._id|string == get_user_id() %}
+                                                <span class="badge bg-info">You</span>
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <div class="mb-3">
+                            <i class="fas fa-users fa-4x text-muted"></i>
+                        </div>
+                        <h5>No teammates yet</h5>
+                        <p class="text-muted">The coach will add more team members</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Performance Metrics -->
+    <div class="col-12 mb-4">
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Team Performance</h5>
+                <div>
+                    <select id="metricSelect" class="form-select form-select-sm bg-dark text-white border-secondary">
+                        {% for metric in metrics %}
+                            <option value="{{ metric.name }}">{{ metric.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if performances %}
+                    <div class="mb-4">
+                        <canvas id="teamPerformanceChart" height="250"></canvas>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="btn-group">
+                            <a href="#" class="btn btn-primary" id="compareBtn">
+                                <i class="fas fa-chart-bar me-2"></i>Compare Athletes
+                            </a>
+                            <a href="#" class="btn btn-info" id="historyBtn">
+                                <i class="fas fa-history me-2"></i>View My History
+                            </a>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <div class="mb-3">
+                            <i class="fas fa-chart-line fa-4x text-muted"></i>
+                        </div>
+                        <h5>No performance data yet</h5>
+                        <p class="text-muted">Performance data will appear once recorded by the coach</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Team Performance Table -->
+    <div class="col-12">
+        <div class="card bg-dark border-0 shadow">
+            <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Performances</h5>
+                <div>
+                    <input type="text" id="performanceSearch" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Search performances...">
+                </div>
+            </div>
+            <div class="card-body">
+                {% if performances %}
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover" id="performanceTable">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Athlete</th>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for perf in performances[:20] %}
+                                <tr class="performance-row {% if perf.athlete_id == get_user_id() %}table-primary{% endif %}">
+                                    <td>{{ perf.recorded_at.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        {% for teammate in teammates %}
+                                            {% if teammate._id|string == perf.athlete_id %}
+                                                {{ teammate.username }}
+                                                {% if teammate._id|string == get_user_id() %}
+                                                    <span class="badge bg-info">You</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                    <td>{{ perf.metric_name }}</td>
+                                    <td>{{ perf.value }}</td>
+                                    <td>{{ perf.notes or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {% if performances|length > 20 %}
+                        <div class="text-center mt-3">
+                            <button id="loadMoreBtn" class="btn btn-sm btn-outline-light">
+                                Load More Performances
+                            </button>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                        <p>No performance data recorded yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize performance chart if data exists
+    if (document.getElementById('teamPerformanceChart')) {
+        const performances = {{ performances|tojson }};
+        if (performances.length > 0) {
+            const metricSelect = document.getElementById('metricSelect');
+            const compareBtn = document.getElementById('compareBtn');
+            const historyBtn = document.getElementById('historyBtn');
+            
+            let selectedMetric = metricSelect.value;
+            
+            // Create chart function
+            const createChart = (metric) => {
+                // Filter performances for selected metric
+                const filteredPerformances = performances.filter(p => p.metric_name === metric);
+                
+                // Group by athlete
+                const athletes = {};
+                {% for teammate in teammates %}
+                    athletes["{{ teammate._id }}"] = "{{ teammate.username }}";
+                {% endfor %}
+                
+                // Group performances by athlete
+                const athletePerformances = {};
+                filteredPerformances.forEach(perf => {
+                    const athleteId = perf.athlete_id;
+                    const athleteName = athletes[athleteId] || 'Unknown';
+                    
+                    if (!athletePerformances[athleteId]) {
+                        athletePerformances[athleteId] = {
+                            name: athleteName,
+                            isCurrentUser: athleteId === "{{ get_user_id() }}",
+                            performances: []
+                        };
+                    }
+                    
+                    athletePerformances[athleteId].performances.push({
+                        date: new Date(perf.recorded_at.$date).toISOString().split('T')[0],
+                        value: perf.value
+                    });
+                });
+                
+                // Sort performances by date for each athlete
+                Object.values(athletePerformances).forEach(athlete => {
+                    athlete.performances.sort((a, b) => new Date(a.date) - new Date(b.date));
+                });
+                
+                // Prepare datasets
+                const datasets = Object.values(athletePerformances).map((athlete, index) => {
+                    // Generate a color (highlight current user)
+                    let color;
+                    if (athlete.isCurrentUser) {
+                        color = 'rgba(75, 192, 192, 1)';
+                    } else {
+                        // Generate a random color for other athletes
+                        const hue = (index * 137) % 360;
+                        color = `hsl(${hue}, 70%, 60%)`;
+                    }
+                    
+                    return {
+                        label: athlete.name + (athlete.isCurrentUser ? ' (You)' : ''),
+                        data: athlete.performances.map(p => ({ x: p.date, y: p.value })),
+                        borderColor: color,
+                        backgroundColor: athlete.isCurrentUser ? 'rgba(75, 192, 192, 0.2)' : 'transparent',
+                        tension: 0.4,
+                        borderWidth: athlete.isCurrentUser ? 3 : 2,
+                        pointRadius: athlete.isCurrentUser ? 5 : 3
+                    };
+                });
+                
+                // Create/update chart
+                const ctx = document.getElementById('teamPerformanceChart').getContext('2d');
+                
+                if (window.teamChart) {
+                    window.teamChart.destroy();
+                }
+                
+                window.teamChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            },
+                            title: {
+                                display: true,
+                                text: `${metric} Performance Comparison`
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Value'
+                                }
+                            },
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'day',
+                                    displayFormats: {
+                                        day: 'MMM d'
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Date'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Update compare button URL
+                if (compareBtn) {
+                    compareBtn.href = "{{ url_for('athlete.compare', team_id=team._id, metric_name='METRIC') }}".replace('METRIC', metric);
+                }
+                
+                // Update history button URL
+                if (historyBtn) {
+                    historyBtn.href = "{{ url_for('athlete.performance_history', team_id=team._id, metric_name='METRIC') }}".replace('METRIC', metric);
+                }
+            };
+            
+            // Initial chart creation
+            if (selectedMetric) {
+                createChart(selectedMetric);
+            }
+            
+            // Update chart when metric changes
+            if (metricSelect) {
+                metricSelect.addEventListener('change', function() {
+                    selectedMetric = this.value;
+                    createChart(selectedMetric);
+                });
+            }
+        }
+    }
+    
+    // Performance search functionality
+    const searchInput = document.getElementById('performanceSearch');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+            const searchText = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#performanceTable tbody tr');
+            
+            rows.forEach(row => {
+                const athlete = row.cells[1].textContent.toLowerCase();
+                const metric = row.cells[2].textContent.toLowerCase();
+                const notes = row.cells[4].textContent.toLowerCase();
+                
+                if (athlete.includes(searchText) || metric.includes(searchText) || notes.includes(searchText)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+    
+    // Load more button
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    if (loadMoreBtn) {
+        let displayCount = 20;
+        const performances = {{ performances|tojson }};
+        
+        loadMoreBtn.addEventListener('click', function() {
+            displayCount += 20;
+            
+            if (displayCount >= performances.length) {
+                this.style.display = 'none';
+            }
+            
+            // In a real app, this would fetch more data from the server
+            // For this demo, we'll just show a message
+            alert('In a real app, this would load more performance data from the server.');
+        });
+    }
+});
+</script>
+{% endblock %}

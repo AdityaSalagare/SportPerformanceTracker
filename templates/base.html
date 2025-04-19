@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sports Performance Tracker {% block title %}{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body data-bs-theme="dark">
+    <nav class="navbar navbar-expand-lg bg-dark navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-chart-line me-2"></i>Sports Performance Tracker
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if session.get('user_id') %}
+                        {% if is_coach() %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('coach.dashboard') }}">Dashboard</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('coach.manage_teams') }}">Teams</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('coach.reports') }}">Reports</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('coach.notifications') }}">
+                                    <i class="fas fa-bell"></i>
+                                    <span class="badge bg-danger rounded-pill notification-count"></span>
+                                </a>
+                            </li>
+                        {% elif is_athlete() %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('athlete.dashboard') }}">Dashboard</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('athlete.profile') }}">My Profile</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('athlete.notifications') }}">
+                                    <i class="fas fa-bell"></i>
+                                    <span class="badge bg-danger rounded-pill notification-count"></span>
+                                </a>
+                            </li>
+                        {% endif %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user-circle me-1"></i>{{ get_username() }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                                <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('auth.register') }}">Register</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <main class="container py-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-dark text-light py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Sports Performance Tracker</h5>
+                    <p>A comprehensive tool for coaches and athletes to track performance metrics and improve results.</p>
+                </div>
+                <div class="col-md-3">
+                    <h5>Links</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="{{ url_for('index') }}" class="text-light">Home</a></li>
+                        {% if session.get('user_id') %}
+                            <li><a href="{{ url_for('auth.logout') }}" class="text-light">Logout</a></li>
+                        {% else %}
+                            <li><a href="{{ url_for('auth.login') }}" class="text-light">Login</a></li>
+                            <li><a href="{{ url_for('auth.register') }}" class="text-light">Register</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h5>Contact</h5>
+                    <p><i class="fas fa-envelope me-2"></i> support@sportstracker.com</p>
+                </div>
+            </div>
+            <hr>
+            <div class="text-center">
+                <p>&copy; 2023 Sports Performance Tracker. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- jQuery for simplicity (if needed) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+    
+    {% block extra_js %}{% endblock %}
+    
+    <script>
+        // Function to fetch notification count
+        function updateNotificationCount() {
+            const countElement = document.querySelector('.notification-count');
+            if (!countElement) return;
+            
+            {% if session.get('user_id') %}
+                // In a real app, we would fetch this via AJAX
+                // For now, let's just set a placeholder value
+                {% if is_coach() %}
+                    fetch('/coach/api/notification_count')
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.count > 0) {
+                                countElement.textContent = data.count;
+                                countElement.style.display = 'inline';
+                            } else {
+                                countElement.style.display = 'none';
+                            }
+                        })
+                        .catch(err => console.error('Error fetching notifications:', err));
+                {% elif is_athlete() %}
+                    fetch('/athlete/api/notification_count')
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.count > 0) {
+                                countElement.textContent = data.count;
+                                countElement.style.display = 'inline';
+                            } else {
+                                countElement.style.display = 'none';
+                            }
+                        })
+                        .catch(err => console.error('Error fetching notifications:', err));
+                {% endif %}
+            {% endif %}
+        }
+        
+        // Update notification count when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            updateNotificationCount();
+            
+            // Update every 30 seconds
+            setInterval(updateNotificationCount, 30000);
+        });
+    </script>
+</body>
+</html>
