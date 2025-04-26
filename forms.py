@@ -52,3 +52,11 @@ class ReportForm(FlaskForm):
     date_from = DateField('From Date', format='%Y-%m-%d', validators=[Optional()])
     date_to = DateField('To Date', format='%Y-%m-%d', validators=[Optional()])
     submit = SubmitField('Generate Report')
+class AthleteMetricForm(FlaskForm):
+    name = StringField('Metric Name', validators=[DataRequired()])
+    description = TextAreaField('Description', validators=[Optional()])
+    unit = StringField('Unit', validators=[DataRequired()])
+    min_value = FloatField('Minimum Value', validators=[Optional()])
+    max_value = FloatField('Maximum Value', validators=[Optional()])
+    weight = FloatField('Weight (e.g., 1.0, 1.5)', validators=[DataRequired()])
+    submit = SubmitField('Add Athlete Metric')

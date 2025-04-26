@@ -84,39 +84,59 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
     // Function to fetch athlete information
     function fetchAthleteInfo(athleteId, elementId) {
         fetch(`/coach/api/athlete/${athleteId}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) throw new Error('Athlete not found');
+                return response.json();
+            })
             .then(data => {
-                document.getElementById(elementId).textContent = data.username || 'Unknown Athlete';
+                document.getElementById(elementId).textContent = data.username;
             })
             .catch(error => {
                 console.error('Error fetching athlete info:', error);
                 document.getElementById(elementId).textContent = 'Unknown Athlete';
             });
     }
-    
+
     // Fetch athlete info for each member
     {% for athlete_id in team.athletes %}
         fetchAthleteInfo('{{ athlete_id }}', 'athlete-{{ athlete_id }}');
     {% endfor %}
-    
-    // Handle remove athlete buttons
-    const removeButtons = document.querySelectorAll('.remove-athlete');
-    removeButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const athleteId = this.dataset.athleteId;
-            const confirmed = confirm('Are you sure you want to remove this athlete from the team?');
-            
-            if (confirmed) {
-                // In a real application, this would send an AJAX request to remove the athlete
-                // For this demo, just show success and redirect
-                alert('Athlete removed from team successfully!');
-                window.location.reload();
-            }
-        });
+
+    // 3) wire up your remove buttons
+  document.querySelectorAll('.remove-athlete').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!confirm('Remove this athlete from the team?')) return;
+      const athleteId = btn.dataset.athleteId;
+
+      fetch('{{ url_for("coach.api_remove_athlete") }}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+          team_id: '{{ team._id }}',
+          athlete_id: athleteId
+        })
+      })
+      .then(r => r.json())
+      .then(json => {
+        if (json.success) {
+          btn.closest('.list-group-item').remove();
+        } else {
+          alert('Failed to remove athlete: ' + (json.message || ''));
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Error removing athlete');
+      });
     });
+  });
 });
 </script>
 {% endblock %}

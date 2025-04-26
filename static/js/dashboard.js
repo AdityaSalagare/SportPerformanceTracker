@@ -3,51 +3,81 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Progress animation for stat cards
-    const statCards = document.querySelectorAll('.stat-card');
-    if (statCards.length > 0) {
-        statCards.forEach((card, index) => {
-            setTimeout(() => {
-                card.classList.add('animate__animated', 'animate__fadeInUp');
-            }, index * 100);
-        });
+    const teamSelect   = document.getElementById('chartTeamSelect');
+    const metricSelect = document.getElementById('chartMetricSelect');
+    let performanceChart = null;
+  
+    // Fetch + draw chart for chosen team & metric
+    function createChart(teamId, metric) {
+      if (!teamId || !metric) return;
+  
+      fetch(`/coach/api/performance_data/${teamId}/${metric}`)
+        .then(r => r.json())
+        .then(data => {
+          if (!data.length) {
+            document.getElementById('performanceChart').style.display = 'none';
+            return;
+          }
+          document.getElementById('performanceChart').style.display = 'block';
+  
+          // build dates & datasets
+          const athletes = [...new Set(data.map(d => d.athlete))];
+          const dates    = [...new Set(data.map(d => d.date))].sort();
+  
+          const datasets = athletes.map(name => {
+            const color = () => Math.floor(Math.random()*200)+30;
+            const d = data.filter(d=>d.athlete===name);
+            return {
+              label: name,
+              data: dates.map(date => {
+                const match = d.find(x=>x.date===date);
+                return match ? match.value : null;
+              }),
+              borderColor: `rgb(${color()},${color()},${color()})`,
+              backgroundColor: `rgba(0,0,0,0)`,
+              tension: 0.4
+            };
+          });
+  
+          const ctx = document.getElementById('performanceChart').getContext('2d');
+          if (performanceChart) performanceChart.destroy();
+          performanceChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: dates, datasets },
+            options: {
+              responsive: true,
+              scales: {
+                y: { beginAtZero: true },
+                x: { title: { display: true, text: 'Date' } }
+              }
+            }
+          });
+        })
+        .catch(console.error);
     }
-
-    // Performance chart date range selector
-    const rangeSelector = document.getElementById('dateRangeSelector');
-    if (rangeSelector) {
-        rangeSelector.addEventListener('change', function() {
-            const range = this.value;
-            updateChartDateRange(range);
-        });
+  
+    // when either select changes, redraw
+    function onSelectionChange() {
+      createChart(teamSelect.value, metricSelect.value);
     }
-
-    // Team cards hover effect
-    const teamCards = document.querySelectorAll('.team-card');
-    if (teamCards.length > 0) {
-        teamCards.forEach(card => {
-            card.addEventListener('mouseenter', function() {
-                const icon = this.querySelector('.fa-users');
-                if (icon) {
-                    icon.classList.add('fa-bounce');
-                }
-            });
-            
-            card.addEventListener('mouseleave', function() {
-                const icon = this.querySelector('.fa-users');
-                if (icon) {
-                    icon.classList.remove('fa-bounce');
-                }
-            });
+  
+    // when team changes, reload its metrics list
+    teamSelect.addEventListener('change', function() {
+      fetch(`/coach/api/team/${this.value}/metrics`)
+        .then(r => r.json())
+        .then(metrics => {
+          metricSelect.innerHTML = metrics
+            .map(m => `<option value="${m.name}">${m.name.replace('_',' ')}</option>`)
+            .join('');
+          onSelectionChange();
         });
-    }
-
-    // Notification counter
-    fetchNotificationCount();
-    
-    // Periodically check for new notifications
-    setInterval(fetchNotificationCount, 60000); // Every minute
-});
+    });
+  
+    metricSelect.addEventListener('change', onSelectionChange);
+  
+    // initial draw
+    onSelectionChange();
+  });
 
 /**
  * Updates the chart date range based on selection

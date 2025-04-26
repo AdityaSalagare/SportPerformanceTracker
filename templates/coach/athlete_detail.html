@@ -55,28 +55,27 @@
                 
                 <h6 class="border-bottom pb-2 mb-3">Quick Actions</h6>
                 <div class="d-grid gap-2">
-                    {% if teams %}
+                    {% if teams and teams|length > 0 %}
                         <a href="{{ url_for('coach.record_performance', team_id=teams[0]._id) }}" class="btn btn-primary">
                             <i class="fas fa-plus-circle me-2"></i>Record Performance
                         </a>
-                        <a href="{{ url_for('coach.evaluate_athlete_view', athlete_id=athlete._id) }}" class="btn btn-info">
-                            <i class="fas fa-chart-bar me-2"></i>Evaluate Athlete
-                        </a>
-                        <a href="{{ url_for('coach.export_athlete_excel', athlete_id=athlete._id) }}" class="btn btn-success">
-                            <i class="fas fa-file-excel me-2"></i>Export to Excel
-                        </a>
                     {% else %}
-                        <button class="btn btn-primary" disabled>
+                        <a href="{{ url_for('coach.record_individual_performance', athlete_id=athlete._id) }}" class="btn btn-primary">
                             <i class="fas fa-plus-circle me-2"></i>Record Performance
-                        </button>
-                        <button class="btn btn-info" disabled>
-                            <i class="fas fa-chart-bar me-2"></i>Evaluate Athlete
-                        </button>
-                        <button class="btn btn-success" disabled>
-                            <i class="fas fa-file-excel me-2"></i>Export to Excel
-                        </button>
+                        </a>
                     {% endif %}
+                    
+                    <a href="{{ url_for('coach.evaluate_athlete_view', athlete_id=athlete._id) }}" class="btn btn-info">
+                        <i class="fas fa-chart-bar me-2"></i>Evaluate Athlete
+                    </a>
+                    <a href="{{ url_for('coach.export_athlete_excel', athlete_id=athlete._id) }}" class="btn btn-success">
+                        <i class="fas fa-file-excel me-2"></i>Export to Excel
+                    </a>
+                    <a href="#" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#addMetricModal">
+                        <i class="fas fa-plus me-2"></i>Add Custom Metric
+                    </a>
                 </div>
+                
             </div>
         </div>
     </div>
@@ -98,30 +97,30 @@
             <div class="card-body">
                 <div id="tableView">
                     {% if performances %}
-                        <div class="table-responsive">
-                            <table class="table table-dark table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Team</th>
-                                        <th>Metric</th>
-                                        <th>Value</th>
-                                        <th>Notes</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for perf in performances %}
-                                    <tr>
-                                        <td>{{ perf.recorded_at.strftime('%Y-%m-%d') }}</td>
-                                        <td>{{ perf.team_name }}</td>
-                                        <td>{{ perf.metric_name }}</td>
-                                        <td>{{ perf.value }}</td>
-                                        <td>{{ perf.notes or '-' }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
+                      <div class="table-responsive">
+                        <table class="table table-dark table-hover">
+                          <thead>
+                            <tr>
+                              <th>Date</th>
+                              <th>Team</th>
+                              <th>Metric</th>
+                              <th>Value</th>
+                              <th>Notes</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {% for perf in performances %}
+                            <tr>
+                              <td>{{ perf.date }}</td>
+                              <td>{{ perf.team_name }}</td>
+                              <td>{{ perf.metric_name }}</td>
+                              <td>{{ perf.value }}</td>
+                              <td>{{ perf.notes or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                          </tbody>
+                        </table>
+                      </div>
                     {% else %}
                         <div class="text-center py-5">
                             <div class="mb-3">
@@ -215,7 +214,62 @@
             </div>
         </div>
     </div>
+    
 </div>
+<!-- Add Metric Modal -->
+<div class="modal fade" id="addMetricModal" tabindex="-1" aria-labelledby="addMetricModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form method="POST" action="{{ url_for('coach.add_metric_to_athlete', athlete_id=athlete._id) }}">
+      {{ form.hidden_tag() }}
+      <div class="modal-content bg-dark text-white">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addMetricModalLabel">Add Custom Metric for {{ athlete.username }}</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body row g-3">
+          <div class="col-md-6">{{ form.name.label }}{{ form.name(class="form-control") }}</div>
+          <div class="col-md-6">{{ form.unit.label }}{{ form.unit(class="form-control") }}</div>
+          <div class="col-md-6">{{ form.min_value.label }}{{ form.min_value(class="form-control") }}</div>
+          <div class="col-md-6">{{ form.max_value.label }}{{ form.max_value(class="form-control") }}</div>
+          <div class="col-md-6">{{ form.weight.label }}{{ form.weight(class="form-control") }}</div>
+          <div class="col-12">{{ form.description.label }}{{ form.description(class="form-control") }}</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success">{{ form.submit.label }}</button>
+        </div>
+      </div>
+    </form>
+  </div>
+  <!-- Add Metric Modal -->
+<div class="modal fade" id="addMetricModal" tabindex="-1" aria-labelledby="addMetricModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <form method="POST" action="{{ url_for('coach.add_metric_to_athlete', athlete_id=athlete._id) }}">
+        {{ form.hidden_tag() }}
+        <div class="modal-content bg-dark text-white">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addMetricModalLabel">Add Custom Metric for {{ athlete.username }}</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-md-6">{{ form.name.label }}{{ form.name(class="form-control") }}</div>
+            <div class="col-md-6">{{ form.unit.label }}{{ form.unit(class="form-control") }}</div>
+            <div class="col-md-6">{{ form.min_value.label }}{{ form.min_value(class="form-control") }}</div>
+            <div class="col-md-6">{{ form.max_value.label }}{{ form.max_value(class="form-control") }}</div>
+            <div class="col-md-6">{{ form.weight.label }}{{ form.weight(class="form-control") }}</div>
+            <div class="col-12">{{ form.description.label }}{{ form.description(class="form-control") }}</div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-success">{{ form.submit.label }}</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -254,83 +308,57 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Convert performance data from Jinja to JS
         const performances = {{ performances|tojson }};
+        console.log(performances);
         if (performances.length === 0) return;
         
         // Group performances by metric
-        const metricGroups = {};
-        performances.forEach(perf => {
-            if (!metricGroups[perf.metric_name]) {
-                metricGroups[perf.metric_name] = [];
-            }
-            metricGroups[perf.metric_name].push({
-                date: new Date(perf.recorded_at.$date).toISOString().split('T')[0],
-                value: perf.value
-            });
-        });
-        
-        // Sort by date for each metric
-        Object.keys(metricGroups).forEach(metric => {
-            metricGroups[metric].sort((a, b) => new Date(a.date) - new Date(b.date));
-        });
-        
-        // Create datasets for chart
-        const datasets = Object.keys(metricGroups).map((metric, index) => {
-            // Generate a color
-            const hue = (index * 137) % 360;
-            const color = `hsl(${hue}, 70%, 60%)`;
-            
-            return {
-                label: metric,
-                data: metricGroups[metric].map(p => p.value),
-                borderColor: color,
-                backgroundColor: `hsla(${hue}, 70%, 60%, 0.1)`,
-                tension: 0.4,
-                hidden: index > 0 // Only show the first metric by default
-            };
-        });
-        
-        // Get all unique dates for x-axis
-        const allDates = [...new Set(
-            performances.map(p => new Date(p.recorded_at.$date).toISOString().split('T')[0])
-        )].sort();
-        
-        // Create chart
-        const ctx = document.getElementById('performanceChart').getContext('2d');
-        performanceChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: allDates,
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Value'
-                        }
-                    },
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Date'
-                        }
-                    }
-                }
-            }
-        });
+        // Group by metric_name
+  const metricGroups = {};
+  performances.forEach(p => {
+    if (!metricGroups[p.metric_name]) metricGroups[p.metric_name] = [];
+    metricGroups[p.metric_name].push({
+      date: p.date,     // ← use the string date from Python
+      value: p.value
+    });
+  });
+
+  // Sort each group's array by that date
+  Object.values(metricGroups).forEach(arr =>
+    arr.sort((a, b) => new Date(a.date) - new Date(b.date))
+  );
+
+  // Build Chart.js datasets
+  const datasets = Object.entries(metricGroups).map(([metric, arr], idx) => {
+    const hue = (idx * 137) % 360;
+    return {
+      label: metric,
+      data: arr.map(o => o.value),
+      borderColor:   `hsl(${hue},70%,60%)`,
+      backgroundColor:`hsla(${hue},70%,60%,0.1)`,
+      tension: 0.4,
+      hidden: idx > 0
+    };
+  });
+
+  // X‑axis labels = all unique dates
+  const labels = [...new Set(performances.map(p => p.date))].sort();
+
+  const ctx = document.getElementById('performanceChart').getContext('2d');
+  performanceChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip:{ mode:'index', intersect:false }
+      },
+      scales: {
+        x:{ title:{ display:true, text:'Date' } },
+        y:{ title:{ display:true, text:'Value' }, beginAtZero:true }
+      }
+    }
+  });
         
         // Setup metric filter
         const metricFilter = document.getElementById('metricFilter');

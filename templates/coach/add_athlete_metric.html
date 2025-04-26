@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Add Metric to {{ athlete.username }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-4">Add Custom Metric to {{ athlete.username }}</h2>
+  <form method="POST">
+    {{ form.hidden_tag() }}
+    <div class="mb-3">{{ form.name.label }}{{ form.name(class="form-control") }}</div>
+    <div class="mb-3">{{ form.description.label }}{{ form.description(class="form-control") }}</div>
+    <div class="mb-3">{{ form.unit.label }}{{ form.unit(class="form-control") }}</div>
+    <div class="mb-3">{{ form.min_value.label }}{{ form.min_value(class="form-control") }}</div>
+    <div class="mb-3">{{ form.max_value.label }}{{ form.max_value(class="form-control") }}</div>
+    <div class="mb-3">{{ form.weight.label }}{{ form.weight(class="form-control") }}</div>
+    <button type="submit" class="btn btn-success">{{ form.submit.label }}</button>
+  </form>
+</div>
+{% endblock %}

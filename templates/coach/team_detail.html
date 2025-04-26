@@ -173,11 +173,11 @@
                     </div>
                     
                     {% if performances|length > 10 %}
-                        <div class="text-center mt-3">
-                            <a href="{{ url_for('coach.reports', team_id=team._id) }}" class="btn btn-sm btn-outline-light">
-                                View All Performances
-                            </a>
-                        </div>
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('coach.team_performances', team_id=team._id) }}" class="btn btn-sm btn-outline-light">
+                        View All Performances
+                        </a>
+                    </div>
                     {% endif %}
                 {% else %}
                     <div class="text-center py-4">

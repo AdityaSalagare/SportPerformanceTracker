@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from app import mongo, bcrypt
+from extensions import mongo, bcrypt
 from bson.objectid import ObjectId
 from datetime import datetime
 import logging

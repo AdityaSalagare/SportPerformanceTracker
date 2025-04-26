@@ -1,4 +1,4 @@
-from app import mongo
+from extensions import mongo
 from datetime import datetime
 import json
 import logging
@@ -44,6 +44,21 @@ class Team:
         result = mongo.db.teams.insert_one(team_data)
         return str(result.inserted_id)
     
+    
+    @staticmethod
+    def remove_athlete_from_team(team_id, athlete_id):
+        from bson.objectid import ObjectId
+        # Pull athlete_id out of both athletes[] and athlete_details[]
+        mongo.db.teams.update_one(
+            {"_id": ObjectId(team_id)},
+            {
+                "$pull": {
+                    "athletes": athlete_id,
+                    "athlete_details": {"athlete_id": athlete_id}
+                }
+            }
+        )
+        return True
     @staticmethod
     def get_teams_by_coach(coach_id):
         """Get teams by coach ID, or all teams if no teams found for the coach"""

@@ -1,41 +1,45 @@
 import os
 import logging
 from flask import Flask, render_template, redirect, url_for, flash, session, request, jsonify
-from flask_pymongo import PyMongo
-from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from datetime import datetime, timedelta
 import json
+from datetime import datetime
+from bson import ObjectId
 import pymongo
 from pymongo.errors import ConnectionFailure
-
+from extensions import mongo, bcrypt
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
+logging.getLogger("werkzeug").setLevel(logging.WARNING)
+from flask_wtf.csrf import CSRFProtect
 
+class CustomJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        if isinstance(obj, ObjectId):
+            return str(obj)
+        return super().default(obj)
 # Create Flask app
 app = Flask(__name__)
+app.json_encoder = CustomJSONEncoder
 app.secret_key = os.environ.get("SESSION_SECRET", "default_secret_key")
 
-# Configure MongoDB
 mongo_uri = "mongodb+srv://atsalagare2:atsalagare2@cluster0.rd1gzln.mongodb.net/evaluator?retryWrites=true&w=majority&appName=Cluster0"
 app.config["MONGO_URI"] = mongo_uri
+
 try:
-    # Check if we can connect to MongoDB directly first
     client = pymongo.MongoClient(mongo_uri)
     client.admin.command('ping')
     logging.info("MongoDB connection successful")
-    # Then use the flask_pymongo extension
-    mongo = PyMongo(app)
 except ConnectionFailure as e:
     logging.error(f"MongoDB connection failed: {e}")
-    # Create a fallback database connection that will fail gracefully
-    logging.warning("Using fallback connection mode")
-    mongo = PyMongo(app)
-    
-bcrypt = Bcrypt(app)
-CORS(app)
 
-# Import routes
+mongo.init_app(app)
+bcrypt.init_app(app)
+CORS(app)
+csrf = CSRFProtect(app)
+# Import routes AFTER extensions are initialized
 from routes.auth_routes import auth_bp
 from routes.coach_routes import coach_bp
 from routes.athlete_routes import athlete_bp

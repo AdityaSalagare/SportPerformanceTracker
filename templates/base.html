@@ -16,6 +16,7 @@
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     
     {% block extra_css %}{% endblock %}
 </head>
@@ -41,12 +42,7 @@
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ url_for('coach.reports') }}">Reports</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('coach.notifications') }}">
-                                    <i class="fas fa-bell"></i>
-                                    <span class="badge bg-danger rounded-pill notification-count"></span>
-                                </a>
-                            </li>
+                            
                         {% elif is_athlete() %}
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ url_for('athlete.dashboard') }}">Dashboard</a>
@@ -137,55 +133,9 @@
     <!-- jQuery for simplicity (if needed) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     
-    <!-- Custom JS -->
-    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     
     {% block extra_js %}{% endblock %}
     
-    <script>
-        // Function to fetch notification count
-        function updateNotificationCount() {
-            const countElement = document.querySelector('.notification-count');
-            if (!countElement) return;
-            
-            {% if session.get('user_id') %}
-                // In a real app, we would fetch this via AJAX
-                // For now, let's just set a placeholder value
-                {% if is_coach() %}
-                    fetch('/coach/api/notification_count')
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.count > 0) {
-                                countElement.textContent = data.count;
-                                countElement.style.display = 'inline';
-                            } else {
-                                countElement.style.display = 'none';
-                            }
-                        })
-                        .catch(err => console.error('Error fetching notifications:', err));
-                {% elif is_athlete() %}
-                    fetch('/athlete/api/notification_count')
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.count > 0) {
-                                countElement.textContent = data.count;
-                                countElement.style.display = 'inline';
-                            } else {
-                                countElement.style.display = 'none';
-                            }
-                        })
-                        .catch(err => console.error('Error fetching notifications:', err));
-                {% endif %}
-            {% endif %}
-        }
-        
-        // Update notification count when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            updateNotificationCount();
-            
-            // Update every 30 seconds
-            setInterval(updateNotificationCount, 30000);
-        });
-    </script>
+    
 </body>
 </html>

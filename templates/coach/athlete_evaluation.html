@@ -10,13 +10,13 @@
         height: 160px;
         margin: 0 auto;
     }
-    
+
     .progress-circle-bg {
         fill: none;
         stroke: #343a40;
         stroke-width: 4;
     }
-    
+
     .progress-circle-bar {
         fill: none;
         stroke-width: 8;
@@ -25,23 +25,23 @@
         transform-origin: 50% 50%;
         transition: stroke-dashoffset 0.5s ease;
     }
-    
+
     .progress-circle-text {
         font-size: 2.5rem;
         font-weight: bold;
         fill: #fff;
     }
-    
+
     .progress-circle-label {
         font-size: 1rem;
         fill: #adb5bd;
     }
-    
+
     .metric-badge.strength {
         background-color: rgba(25, 135, 84, 0.2);
         color: #198754;
     }
-    
+
     .metric-badge.weakness {
         background-color: rgba(220, 53, 69, 0.2);
         color: #dc3545;
@@ -83,11 +83,9 @@
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="mb-0">Performance Evaluation</h1>
-        <div>
-            <a href="{{ url_for('coach.export_athlete_excel', athlete_id=athlete._id) }}" class="btn btn-outline-primary">
-                <i class="fas fa-file-excel me-2"></i>Export to Excel
-            </a>
-        </div>
+        <a href="{{ url_for('coach.export_athlete_excel', athlete_id=athlete._id) }}" class="btn btn-outline-primary">
+            <i class="fas fa-file-excel me-2"></i>Export to Excel
+        </a>
     </div>
 
     {% if teams %}
@@ -104,86 +102,92 @@
 
     <div class="row">
         <div class="col-md-4">
-            <div class="card bg-dark text-white mb-4">
-                <div class="card-body text-center">
-                    <h5 class="card-title">{{ athlete.username }}</h5>
+            <div class="card bg-dark text-white mb-4 text-center">
+                <div class="card-body">
                     <div class="avatar-placeholder mb-3">
                         <i class="fas fa-user fa-3x text-info"></i>
                     </div>
-                    
+
                     <div class="progress-circle">
                         <svg width="160" height="160" viewBox="0 0 160 160">
                             <circle class="progress-circle-bg" cx="80" cy="80" r="70"></circle>
-                            <circle id="scoreCircle" class="progress-circle-bar" cx="80" cy="80" r="70" 
-                                    stroke="
-                                    {% if evaluation.score >= 85 %}#28a745
-                                    {% elif evaluation.score >= 70 %}#17a2b8
-                                    {% elif evaluation.score >= 50 %}#ffc107
-                                    {% elif evaluation.score >= 30 %}#fd7e14
-                                    {% else %}#dc3545
-                                    {% endif %}"
-                                    stroke-dasharray="440" stroke-dashoffset="{{ 440 - (440 * evaluation.score / 100) }}"></circle>
+                            <circle id="scoreCircle" class="progress-circle-bar" cx="80" cy="80" r="70"
+                                stroke="
+                                {% if evaluation.score >= 85 %}#28a745
+                                {% elif evaluation.score >= 70 %}#17a2b8
+                                {% elif evaluation.score >= 50 %}#ffc107
+                                {% elif evaluation.score >= 30 %}#fd7e14
+                                {% else %}#dc3545
+                                {% endif %}"
+                                stroke-dasharray="440"
+                                stroke-dashoffset="{{ 440 - (440 * evaluation.score / 100) }}">
+                            </circle>
                             <text class="progress-circle-text" x="80" y="85" text-anchor="middle">{{ evaluation.score }}</text>
                             <text class="progress-circle-label" x="80" y="105" text-anchor="middle">out of 100</text>
                         </svg>
                     </div>
-                    
+
                     <h5 class="mt-3">{{ evaluation.summary }}</h5>
                 </div>
             </div>
-            
+
             <div class="card bg-dark text-white mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Key Strengths</h5>
-                </div>
                 <div class="card-body">
+                    <h6><i class="fas fa-check-circle text-success me-2"></i>Key Strengths</h6>
                     {% if evaluation.strengths %}
-                        {% for strength in evaluation.strengths[:5] %}
-                        <span class="metric-badge strength">{{ strength|replace('_', ' ')|title }}</span>
+                        {% for m in evaluation.strengths %}
+                            <span class="badge bg-success rounded-pill me-1">{{ m|replace('_',' ')|title }}</span>
                         {% endfor %}
                     {% else %}
-                        <p class="text-muted">No key strengths identified yet. More performance data needed.</p>
+                        <p class="text-muted">No strengths identified yet</p>
                     {% endif %}
                 </div>
             </div>
-            
+
             <div class="card bg-dark text-white mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Areas for Improvement</h5>
-                </div>
                 <div class="card-body">
+                    <h6><i class="fas fa-exclamation-circle text-warning me-2"></i>Weaknesses</h6>
                     {% if evaluation.weaknesses %}
-                        {% for weakness in evaluation.weaknesses[:5] %}
-                        <span class="metric-badge weakness">{{ weakness|replace('_', ' ')|title }}</span>
+                        {% for m in evaluation.weaknesses %}
+                            <span class="badge bg-danger rounded-pill me-1">{{ m|replace('_',' ')|title }}</span>
                         {% endfor %}
                     {% else %}
-                        <p class="text-muted">No areas for improvement identified yet.</p>
+                        <p class="text-muted">No major weaknesses detected</p>
                     {% endif %}
                 </div>
             </div>
-            
-            <div class="card bg-dark text-white">
-                <div class="card-header">
-                    <h5 class="mb-0">Recommendations</h5>
-                </div>
+
+            <div class="card bg-dark text-white mb-4">
                 <div class="card-body">
+                    <h6><i class="fas fa-bullseye text-info me-2"></i>Top Recommendations</h6>
                     {% if evaluation.recommendations %}
-                        <ul class="list-group list-group-flush bg-dark">
-                            {% for rec in evaluation.recommendations %}
-                            <li class="list-group-item bg-dark text-white border-secondary">{{ rec }}</li>
-                            {% endfor %}
+                        <ul class="list-group list-group-flush">
+                        {% for rec in evaluation.recommendations %}
+                            <li class="list-group-item bg-dark text-white border-light">
+                                <i class="fas fa-lightbulb me-2 text-info"></i>{{ rec }}
+                            </li>
+                        {% endfor %}
                         </ul>
                     {% else %}
-                        <p class="text-muted">No recommendations available yet.</p>
+                        <p class="text-muted">No recommendations available</p>
                     {% endif %}
                 </div>
             </div>
         </div>
-        
+
         <div class="col-md-8">
             <div class="card bg-dark text-white mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Performance Metrics Details</h5>
+                <div class="card-header bg-dark">
+                    <h6 class="mb-0">Metric Radar Chart</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="radarChart" height="300"></canvas>
+                </div>
+            </div>
+
+            <div class="card bg-dark text-white">
+                <div class="card-header bg-dark">
+                    <h6 class="mb-0">Metric Details</h6>
                 </div>
                 <div class="card-body">
                     {% if evaluation.metrics %}
@@ -197,15 +201,15 @@
                                     <div class="card-body">
                                         <h5 class="card-title">{{ metric_name|replace('_', ' ')|title }}</h5>
                                         <div class="d-flex justify-content-between mb-2">
-                                            <span>Current Value:</span>
+                                            <span>Value:</span>
                                             <span class="fw-bold">{{ metric.value }} {{ metric.unit }}</span>
                                         </div>
                                         <div class="d-flex justify-content-between mb-2">
-                                            <span>Team Average:</span>
+                                            <span>Team Avg:</span>
                                             <span>{{ "%.2f"|format(metric.team_avg) }} {{ metric.unit }}</span>
                                         </div>
                                         <div class="d-flex justify-content-between mb-2">
-                                            <span>Performance Score:</span>
+                                            <span>Score:</span>
                                             <span class="fw-bold">{{ "%.1f"|format(metric.score) }}</span>
                                         </div>
                                         <div class="progress" style="height: 8px;">
@@ -227,112 +231,60 @@
                             {% endfor %}
                         </div>
                     {% else %}
-                        <div class="alert alert-info">
-                            No performance metrics have been recorded yet. Record performance data to see evaluation metrics.
-                        </div>
+                        <div class="alert alert-info">No performance data available.</div>
                     {% endif %}
                 </div>
             </div>
-            
-            {% if teams|length > 1 and evaluation.team_scores %}
-            <div class="card bg-dark text-white">
-                <div class="card-header">
-                    <h5 class="mb-0">Performance by Team</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="teamScoreChart" height="200"></canvas>
-                </div>
-            </div>
-            {% endif %}
         </div>
     </div>
 </div>
 {% endblock %}
 
-{% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Function to change team
-    function changeTeam() {
-        const teamId = document.getElementById('teamSelector').value;
-        window.location.href = "{{ url_for('coach.evaluate_athlete_view', athlete_id=athlete._id) }}" + 
-                              (teamId ? "?team_id=" + teamId : "");
-    }
-    
-    // Team score chart
-    {% if teams|length > 1 and evaluation.team_scores %}
-    document.addEventListener('DOMContentLoaded', function() {
-        const ctx = document.getElementById('teamScoreChart').getContext('2d');
-        
-        // Prepare data
-        const teamScores = {{ evaluation.team_scores|tojson }};
-        const labels = [];
-        const data = [];
-        const colors = [];
-        
-        {% for team in teams %}
-        if (teamScores['{{ team._id }}']) {
-            labels.push('{{ team.name }}');
-            data.push(teamScores['{{ team._id }}']);
-            
-            // Set color based on score
-            let color;
-            const score = teamScores['{{ team._id }}'];
-            if (score >= 85) color = '#28a745';
-            else if (score >= 70) color = '#17a2b8';
-            else if (score >= 50) color = '#ffc107';
-            else if (score >= 30) color = '#fd7e14';
-            else color = '#dc3545';
-            
-            colors.push(color);
-        }
-        {% endfor %}
-        
-        // Create chart
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Performance Score',
-                    data: data,
-                    backgroundColor: colors,
-                    borderColor: colors,
-                    borderWidth: 1
-                }]
+function changeTeam() {
+    const teamId = document.getElementById('teamSelector').value;
+    const url = "{{ url_for('coach.evaluate_athlete_view', athlete_id=athlete._id) }}";
+    window.location.href = teamId ? `${url}?team_id=${teamId}` : url;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const labels = {{ evaluation.metrics.keys()|list|tojson }};
+    const data = {{ evaluation.metrics.values()|map(attribute='score')|list|tojson }};
+    const ctx = document.getElementById('radarChart').getContext('2d');
+
+    new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: labels.map(l => l.replaceAll('_', ' ').toUpperCase()),
+            datasets: [{
+                label: 'Metric Score',
+                data: data,
+                fill: true,
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top' },
+                title: { display: true, text: 'Metric-wise Evaluation' }
             },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
-                        },
-                        ticks: {
-                            color: '#fff'
-                        }
-                    },
-                    x: {
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
-                        },
-                        ticks: {
-                            color: '#fff'
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: '#fff'
-                        }
-                    }
+            scales: {
+                r: {
+                    suggestedMin: 0,
+                    suggestedMax: 100,
+                    angleLines: { color: 'rgba(255,255,255,0.1)' },
+                    grid: { color: 'rgba(255,255,255,0.1)' },
+                    pointLabels: { font: { size: 12 } }
                 }
             }
-        });
+        }
     });
-    {% endif %}
+});
 </script>
 {% endblock %}

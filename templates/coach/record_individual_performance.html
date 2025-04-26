@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Record Performance for {{ athlete.username }}</h2>
+<form method="POST">
+    {{ form.hidden_tag() }}
+    <div class="form-group">{{ form.metric_name.label }}{{ form.metric_name }}</div>
+    <div class="form-group">{{ form.value.label }}{{ form.value }}</div>
+    <div class="form-group">{{ form.notes.label }}{{ form.notes }}</div>
+    {{ form.submit(class="btn btn-primary") }}
+</form>
+{% endblock %}

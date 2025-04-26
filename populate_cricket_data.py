@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from app import mongo
+from extensions import mongo
 from bson.objectid import ObjectId
 from models import User, Team, Performance, Notification
 from werkzeug.security import generate_password_hash

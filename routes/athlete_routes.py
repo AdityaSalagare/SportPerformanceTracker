@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, session, jsonify
-from app import mongo
+from extensions import mongo
 from models import Team, User, Performance, Notification
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta
@@ -11,6 +11,7 @@ import logging
 athlete_bp = Blueprint('athlete', __name__, url_prefix='/athlete')
 
 # Decorator to check if user is an athlete
+
 def athlete_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -84,20 +85,42 @@ def profile():
     teams = list(mongo.db.teams.find({'athletes': athlete_id}))
     
     # Get all performances
-    performances = Performance.get_athlete_performances(athlete_id)
+    raw_performances = Performance.get_athlete_performances(athlete_id)
     
-    # Group performances by metric
+    # Prepare table data: convert datetime to string and resolve team names
+    perf_table = []
+    for p in raw_performances:
+        date_str = p['recorded_at'].strftime('%Y-%m-%d')
+        team_name = next((t['name'] for t in teams if str(t['_id']) == p['team_id']), 'Unknown')
+        perf_table.append({
+            'date': date_str,
+            'team_name': team_name,
+            'metric_name': p['metric_name'],
+            'value': p['value'],
+            'notes': p.get('notes','')
+        })
+    
+    # Group performances by metric for chart
     metrics_performance = {}
-    for p in performances:
+    for p in perf_table:
         metric = p['metric_name']
-        if metric not in metrics_performance:
-            metrics_performance[metric] = []
-        metrics_performance[metric].append(p)
+        metrics_performance.setdefault(metric, []).append({
+            'date': p['date'],
+            'value': p['value'],
+            'notes': p['notes']
+        })
     
-    return render_template('athlete/profile.html', 
-                           athlete=athlete, 
-                           teams=teams, 
-                           metrics_performance=metrics_performance)
+    # Determine latest performance
+    latest = perf_table[0] if perf_table else None
+    
+    return render_template(
+        'athlete/profile.html',
+        athlete=athlete,
+        teams=teams,
+        performances=perf_table,
+        metrics_performance=metrics_performance,
+        latest=latest
+    )
 
 # Compare with Teammates
 @athlete_bp.route('/compare/<team_id>/<metric_name>')
@@ -110,50 +133,34 @@ def compare(team_id, metric_name):
         flash('Team not found', 'danger')
         return redirect(url_for('athlete.dashboard'))
     
-    # Check if athlete belongs to this team
     if athlete_id not in team.get('athletes', []):
         flash('You are not a member of this team', 'danger')
         return redirect(url_for('athlete.dashboard'))
     
-    # Find the metric details
-    metric = None
-    for m in team.get('metrics', []):
-        if m['name'] == metric_name:
-            metric = m
-            break
-    
+    # Find metric
+    metric = next((m for m in team.get('metrics', []) if m['name']==metric_name), None)
     if not metric:
         flash('Metric not found', 'danger')
         return redirect(url_for('athlete.team_stats', team_id=team_id))
     
-    # Get all athletes in the team
     athlete_ids = team.get('athletes', [])
-    teammates = list(mongo.db.users.find({'_id': {'$in': [ObjectId(aid) for aid in athlete_ids]}}))
-    
-    # Get latest performance for each athlete for this metric
+    teammates = list(mongo.db.users.find({'_id': {'$in': [ObjectId(a) for a in athlete_ids]}}))
     comparison_data = []
-    for teammate in teammates:
-        teammate_id = str(teammate['_id'])
-        latest_perf = mongo.db.performances.find_one({
-            'team_id': team_id,
-            'athlete_id': teammate_id,
-            'metric_name': metric_name
-        }, sort=[('recorded_at', -1)])
-        
-        if latest_perf:
+    for t in teammates:
+        tid = str(t['_id'])
+        perf = mongo.db.performances.find_one({'team_id':team_id,'athlete_id':tid,'metric_name':metric_name}, sort=[('recorded_at',-1)])
+        if perf:
             comparison_data.append({
-                'athlete': teammate['username'],
-                'value': latest_perf['value'],
-                'date': latest_perf['recorded_at'],
-                'is_current_user': teammate_id == athlete_id
+                'athlete': t['username'],
+                'value': perf['value'],
+                'date': perf['recorded_at'].strftime('%Y-%m-%d'),
+                'is_current_user': tid==athlete_id
             })
-    
-    # Sort by value (descending)
     comparison_data.sort(key=lambda x: x['value'], reverse=True)
     
-    return render_template('athlete/compare.html', 
-                           team=team, 
-                           metric=metric, 
+    return render_template('athlete/compare.html',
+                           team=team,
+                           metric=metric,
                            comparison_data=comparison_data)
 
 # Performance History (for one metric)
@@ -216,19 +223,10 @@ def mark_notification_read(notification_id):
 @athlete_required
 def my_performance_data(team_id, metric_name):
     athlete_id = session.get('user_id')
-    
-    # Get all performances for this metric and athlete
     performances = list(mongo.db.performances.find({
         'team_id': team_id,
         'athlete_id': athlete_id,
         'metric_name': metric_name
     }).sort('recorded_at', 1))
-    
-    data = []
-    for p in performances:
-        data.append({
-            'date': p['recorded_at'].strftime('%Y-%m-%d'),
-            'value': p['value']
-        })
-    
+    data = [{'date': p['recorded_at'].strftime('%Y-%m-%d'), 'value': p['value']} for p in performances]
     return jsonify(data)
